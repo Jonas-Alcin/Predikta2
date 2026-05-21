@@ -1,10 +1,11 @@
 "use client";
 
-import { ArrowLeft, ShieldCheck, Zap, Activity, Info, Check } from "lucide-react";
+import { ArrowLeft, ShieldCheck, Zap, Activity, Info, Check, Bookmark, BookmarkCheck } from "lucide-react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { getMatchById } from "@/app/actions/football";
 import { generatePredictionAnalysis, type AIPredictionResult } from "@/app/actions/ai";
+import { saveBet, removeSavedBet, isBetSaved, logAnalysis } from "@/app/actions/db";
 import { APIFootballFixture } from "@/lib/types";
 
 export default function PredictionDetailPage({ params }: { params: { matchId: string } }) {
@@ -14,6 +15,7 @@ export default function PredictionDetailPage({ params }: { params: { matchId: st
   
   const [aiAnalysis, setAiAnalysis] = useState<AIPredictionResult | null>(null);
   const [analyzing, setAnalyzing] = useState(true);
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     async function loadMatch() {
@@ -22,9 +24,22 @@ export default function PredictionDetailPage({ params }: { params: { matchId: st
       setLoading(false);
       
       if (data) {
+        const savedStatus = await isBetSaved(Number(params.matchId));
+        setSaved(savedStatus);
+
         const analysis = await generatePredictionAnalysis(Number(params.matchId));
         setAiAnalysis(analysis);
         setAnalyzing(false);
+
+        // Registrar en el historial
+        await logAnalysis({
+          fixture_id: data.fixture.id,
+          league_name: data.league.name,
+          team_home: data.teams.home.name,
+          team_away: data.teams.away.name,
+          match_date: data.fixture.date,
+          analysis_summary: analysis.reasoning,
+        });
       } else {
         setAnalyzing(false);
       }
@@ -55,6 +70,26 @@ export default function PredictionDetailPage({ params }: { params: { matchId: st
     
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const toggleSave = async () => {
+    if (!match || !aiAnalysis) return;
+    if (saved) {
+      setSaved(false);
+      await removeSavedBet(match.fixture.id);
+    } else {
+      setSaved(true);
+      await saveBet({
+        fixture_id: match.fixture.id,
+        league_name: match.league.name,
+        team_home: match.teams.home.name,
+        team_away: match.teams.away.name,
+        match_date: match.fixture.date,
+        bet_type: "Apuesta Recomendada",
+        prediction_text: aiAnalysis.recommendedBet,
+        odds: aiAnalysis.odds
+      });
+    }
   };
 
   if (loading) {
@@ -118,9 +153,14 @@ export default function PredictionDetailPage({ params }: { params: { matchId: st
              <div className="absolute left-0 top-0 w-1 h-full bg-primary"></div>
              <div className="flex items-start justify-between mb-6">
                 <div>
-                  <h3 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
-                    <Zap className="text-primary w-6 h-6" /> Mejor Predicción de IA
-                  </h3>
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="text-2xl font-bold text-white flex items-center gap-2">
+                      <Zap className="text-primary w-6 h-6" /> Mejor Predicción de IA
+                    </h3>
+                    <button onClick={toggleSave} disabled={analyzing} className="p-2 rounded-full hover:bg-white/10 transition-colors" title={saved ? "Quitar de Guardados" : "Guardar Apuesta"}>
+                      {saved ? <BookmarkCheck className="w-5 h-5 text-primary" /> : <Bookmark className="w-5 h-5 text-textMuted hover:text-white" />}
+                    </button>
+                  </div>
                   <p className="text-textMuted">Basado en más de 10,000 puntos de datos y el historial H2H</p>
                 </div>
                 <div className="flex flex-col items-end">

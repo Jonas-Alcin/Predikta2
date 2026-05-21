@@ -2,7 +2,7 @@ import { Settings, LogOut, Award, History, Bookmark } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import ProfileAvatar from "@/components/profile/ProfileAvatar";
-import { getTodaysMatches } from "@/app/actions/football";
+import { getSavedBets, getAnalysisHistory } from "@/app/actions/db";
 
 export default async function ProfilePage() {
   const supabase = createClient();
@@ -12,7 +12,8 @@ export default async function ProfilePage() {
   const name = user?.user_metadata?.full_name || user?.user_metadata?.username || email.split("@")[0];
   const avatarSeed = user?.user_metadata?.avatar_seed || email;
 
-  const matches = await getTodaysMatches();
+  const savedBets = await getSavedBets();
+  const history = await getAnalysisHistory();
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 max-w-4xl mx-auto">
@@ -64,24 +65,27 @@ export default async function ProfilePage() {
              </div>
 
              <div className="space-y-4">
-               {matches.length === 0 ? (
+               {savedBets.length === 0 ? (
                  <div className="text-center py-6">
                    <p className="text-sm text-textMuted">No tienes apuestas guardadas actualmente.</p>
                  </div>
                ) : (
-                 matches.slice(0, 2).map((match) => (
-                   <Link href={`/predictions/${match.fixture.id}`} key={match.fixture.id} className="block bg-surface border border-transparent hover:border-border rounded-xl p-4 transition-colors group">
+                 savedBets.map((bet) => (
+                   <Link href={`/predictions/${bet.fixture_id}`} key={bet.id} className="block bg-surface border border-transparent hover:border-border rounded-xl p-4 transition-colors group">
                      <div className="flex flex-col md:flex-row justify-between items-center gap-4">
                         <div className="w-full md:w-auto">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs bg-white/5 px-2 py-0.5 rounded text-textMuted">{match.league.name}</span>
-                            <span className="text-xs text-textMuted">{new Date(match.fixture.date).toLocaleDateString()}</span>
+                            <span className="text-xs bg-white/5 px-2 py-0.5 rounded text-textMuted">{bet.league_name}</span>
+                            <span className="text-xs text-textMuted">{new Date(bet.match_date).toLocaleDateString()}</span>
                           </div>
-                          <div className="font-bold text-white text-sm">{match.teams.home.name} vs {match.teams.away.name}</div>
-                          <div className="text-primary text-xs font-medium">Predicción IA Disponible</div>
+                          <div className="font-bold text-white text-sm">{bet.team_home} vs {bet.team_away}</div>
+                          <div className="text-primary text-xs font-medium">{bet.prediction_text}</div>
                         </div>
                         
                         <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
+                          <div className="text-right">
+                            <div className="text-xl font-bold text-white">{bet.odds}</div>
+                          </div>
                           <div className="bg-white/10 group-hover:bg-white/20 text-white font-semibold py-1.5 px-4 rounded-lg text-sm transition-colors text-center inline-block">
                             Ver Análisis
                           </div>
@@ -99,14 +103,32 @@ export default async function ProfilePage() {
                <h3 className="text-lg font-bold text-white">Historial de Análisis</h3>
              </div>
 
-             <div className="text-center py-8">
-               <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
-                 <History className="text-textMuted w-8 h-8 opacity-50" />
-               </div>
-               <h4 className="text-white font-medium mb-1">No hay análisis recientes</h4>
-               <p className="text-sm text-textMuted max-w-sm mx-auto">
-                 Tus predicciones vistas y el historial de análisis de IA aparecerán aquí.
-               </p>
+             <div className="space-y-4">
+               {history.length === 0 ? (
+                 <div className="text-center py-8">
+                   <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
+                     <History className="text-textMuted w-8 h-8 opacity-50" />
+                   </div>
+                   <h4 className="text-white font-medium mb-1">No hay análisis recientes</h4>
+                   <p className="text-sm text-textMuted max-w-sm mx-auto">
+                     Tus predicciones vistas y el historial de análisis de IA aparecerán aquí.
+                   </p>
+                 </div>
+               ) : (
+                 history.map((item) => (
+                   <Link href={`/predictions/${item.fixture_id}`} key={item.id} className="block bg-surface border border-transparent hover:border-border rounded-xl p-4 transition-colors group">
+                     <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                        <div className="w-full md:w-auto">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs bg-white/5 px-2 py-0.5 rounded text-textMuted">{item.league_name}</span>
+                            <span className="text-xs text-textMuted">{new Date(item.created_at).toLocaleString()}</span>
+                          </div>
+                          <div className="font-bold text-white text-sm">{item.team_home} vs {item.team_away}</div>
+                        </div>
+                     </div>
+                   </Link>
+                 ))
+               )}
              </div>
           </div>
         </div>
