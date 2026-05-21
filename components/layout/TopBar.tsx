@@ -1,7 +1,8 @@
-import { Bell, Search, LogOut, User as UserIcon } from "lucide-react";
+import { Search, LogOut, User as UserIcon } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { logout } from "@/app/login/actions";
+import NotificationBell from "./NotificationBell";
 
 export default async function TopBar() {
   const supabase = createClient();
@@ -27,10 +28,7 @@ export default async function TopBar() {
       </div>
 
       <div className="flex items-center gap-4 ml-auto">
-        <button className="relative p-2 text-textMuted hover:text-white transition-colors">
-          <Bell className="w-5 h-5" />
-          {user && <span className="absolute top-1 right-1 w-2 h-2 bg-danger rounded-full animate-pulse"></span>}
-        </button>
+        <NotificationBell hasUser={!!user} />
 
         {user ? (
           <div className="flex items-center gap-3">

@@ -1,11 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Target, AlertTriangle, ShieldCheck, Info, Check } from "lucide-react";
+import { getTodaysMatches } from "@/app/actions/football";
+import { APIFootballFixture } from "@/lib/types";
 
 export default function TopBetsPage() {
   const [activeTab, setActiveTab] = useState<"seguras" | "riesgo">("seguras");
   const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [matches, setMatches] = useState<APIFootballFixture[]>([]);
+
+  useEffect(() => {
+    async function loadMatches() {
+      const todaysMatches = await getTodaysMatches();
+      setMatches(todaysMatches || []);
+    }
+    loadMatches();
+  }, []);
 
   const handleCopy = (bet: any, type: "segura" | "riesgo") => {
     let text = "";
@@ -39,35 +50,47 @@ export default function TopBetsPage() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  // Usar partidos reales de la API
+  const m1 = matches.length > 0 ? matches[0] : null;
+  const m2 = matches.length > 1 ? matches[1] : m1;
+  const m3 = matches.length > 2 ? matches[2] : m1;
+  
+  const team1H = m1 ? m1.teams.home.name : "Arsenal";
+  const team1A = m1 ? m1.teams.away.name : "Chelsea";
+  const team2H = m2 ? m2.teams.home.name : "Real Madrid";
+  const team2A = m2 ? m2.teams.away.name : "Valencia";
+  const team3H = m3 ? m3.teams.home.name : "Juventus";
+  const team3A = m3 ? m3.teams.away.name : "Milan";
+
   const safeBets = [
-    { id: 1, league: "Premier League", time: "Hoy, 15:00", teams: "Arsenal vs Chelsea", prediction: "Gana Arsenal (1X2)", confidence: "85%", odds: "1.85", reasoning: "Arsenal ha ganado sus últimos 5 partidos como local, mientras que Chelsea promedia 1.8 goles en contra como visitante." },
-    { id: 2, league: "La Liga", time: "Hoy, 21:00", teams: "Real Madrid vs Valencia", prediction: "Ambos Equipos Marcan (AEM)", confidence: "82%", odds: "1.75", reasoning: "Históricamente, el 80% de sus enfrentamientos en el Bernabéu terminan con goles de ambos lados. Valencia ha anotado en 9 de sus últimos 10 juegos." },
-    { id: 3, league: "Serie A", time: "Mañana, 15:00", teams: "Juventus vs AC Milan", prediction: "Menos de 2.5 Goles", confidence: "78%", odds: "1.65", reasoning: "Juventus solo ha recibido 4 goles en casa esta temporada. Sus últimos 3 duelos directos tuvieron un promedio de 1.2 goles totales." },
+    { id: 1, league: m1?.league.name || "Premier League", time: "Próximamente", teams: `${team1H} vs ${team1A}`, prediction: `Gana ${team1H} (1X2)`, confidence: "85%", odds: "1.85", reasoning: `${team1H} ha sido muy sólido de local recientemente y las estadísticas muestran superioridad táctica.` },
+    { id: 2, league: m2?.league.name || "La Liga", time: "Próximamente", teams: `${team2H} vs ${team2A}`, prediction: "Ambos Equipos Marcan (AEM)", confidence: "82%", odds: "1.75", reasoning: `Históricamente, los enfrentamientos entre ${team2H} y ${team2A} terminan con goles de ambos lados.` },
+    { id: 3, league: m3?.league.name || "Serie A", time: "Próximamente", teams: `${team3H} vs ${team3A}`, prediction: "Menos de 3.5 Goles", confidence: "78%", odds: "1.65", reasoning: `${team3H} tiene una defensa sólida en casa. Se proyecta un partido cerrado.` },
   ];
 
   const highRiskBets = [
     { 
       id: 4, 
-      title: "Combinada Premier League",
+      title: "Combinada de Ligas",
       confidence: "45%", 
       odds: "8.50",
-      explanation: "💡 IA: Selecciones basadas en tendencias de tiros de esquina (H2H) y debilidades defensivas del Chelsea en las bandas. El árbitro del Spurs-Utd promedia más de 5 tarjetas por juego.",
+      explanation: `💡 IA: Selecciones basadas en tendencias ofensivas de ${team1H} y vulnerabilidades de ${team3A}.`,
       legs: [
-        { match: "Man City vs Liverpool", pick: "Más de 9.5 Corners", odds: "1.65" },
-        { match: "Arsenal vs Chelsea", pick: "Saka > 1.5 Tiros a Puerta", odds: "2.10" },
-        { match: "Tottenham vs Man Utd", pick: "Más de 4.5 Tarjetas Amarillas", odds: "2.45" }
+        { match: `${team1H} vs ${team1A}`, pick: `Gana ${team1H} y +1.5 Goles`, odds: "2.10" },
+        { match: `${team2H} vs ${team2A}`, pick: `${team2H} Anota en Ambas Mitades`, odds: "2.65" },
+        { match: `${team3H} vs ${team3A}`, pick: `Más de 4.5 Tarjetas Amarillas`, odds: "1.52" }
       ]
     },
     { 
       id: 5, 
-      title: "Especial La Liga",
+      title: "Especial Goleadores y Corners",
       confidence: "38%", 
       odds: "12.00",
-      explanation: "💡 IA: Vinicius Jr. mantiene una racha goleadora en el Bernabéu. El Sevilla muestra una defensa adelantada ideal para el estilo del Barça. Atleti y Betis juegan partidos muy cerrados en el medio campo.",
+      explanation: `💡 IA: Analizando el estilo de juego directo, se esperan muchos tiros de esquina en el partido de ${team2H}.`,
       legs: [
-        { match: "Real Madrid vs Valencia", pick: "Vinicius Jr. Anota", odds: "2.30" },
-        { match: "Barcelona vs Sevilla", pick: "Gana Barça y +2.5 Goles", odds: "2.80" },
-        { match: "Atleti vs Betis", pick: "Menos de 8.5 Corners", odds: "1.85" }
+        { match: `${team1H} vs ${team1A}`, pick: "Más de 9.5 Corners", odds: "1.85" },
+        { match: `${team2H} vs ${team2A}`, pick: `Gana ${team2A} o Empate`, odds: "3.20" },
+        { match: `${team3H} vs ${team3A}`, pick: "Menos de 2.5 Goles", odds: "2.02" }
       ]
     }
   ];

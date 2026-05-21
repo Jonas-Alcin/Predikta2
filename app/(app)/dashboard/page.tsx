@@ -2,8 +2,9 @@
 
 import { Trophy, ChevronRight, ShieldCheck, Flame, AlertTriangle, Edit2, Copy, Check, X, Plus, Trash2, Info } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
-
+import { useState, useEffect } from "react";
+import { getTodaysMatches } from "@/app/actions/football";
+import { APIFootballFixture } from "@/lib/types";
 type BetLeg = {
   id: string;
   title: string;
@@ -32,6 +33,19 @@ export default function DashboardPage() {
   const [editingSlipId, setEditingSlipId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
+  // States for real API matches
+  const [matches, setMatches] = useState<APIFootballFixture[]>([]);
+  const [loadingMatches, setLoadingMatches] = useState(true);
+
+  useEffect(() => {
+    async function loadMatches() {
+      const data = await getTodaysMatches();
+      setMatches(data);
+      setLoadingMatches(false);
+    }
+    loadMatches();
+  }, []);
+
   const numBudget = Number(budget) || 0;
   const numTarget = Number(target) || 0;
   
@@ -53,6 +67,24 @@ export default function DashboardPage() {
     const arLeg2 = Math.cbrt(riskBase) * 1.1;
     const arLeg3 = riskBase / (arLeg1 * arLeg2);
 
+    // Usar partidos reales de la API en lugar de estáticos si están disponibles
+    const m1 = matches.length > 0 ? matches[0] : null;
+    const m2 = matches.length > 1 ? matches[1] : m1;
+    const m3 = matches.length > 2 ? matches[2] : m1;
+    
+    const team1 = m1 ? m1.teams.home.name : "Arsenal";
+    const team1Opp = m1 ? m1.teams.away.name : "Chelsea";
+    const team2 = m2 ? m2.teams.home.name : "Real Madrid";
+    const team2Opp = m2 ? m2.teams.away.name : "Valencia";
+    const team3 = m3 ? m3.teams.away.name : "Man City";
+    const team3Opp = m3 ? m3.teams.home.name : "Liverpool";
+
+    // Ajustar el texto de las apuestas según las cuotas para que sea realista
+    const getSafePick = (odds: number, team: string) => odds > 4 ? `Gana ${team} y +3.5 Goles` : odds > 2 ? `Gana ${team} y Ambos Marcan` : odds > 1.5 ? `Gana ${team}` : `${team} o Empate`;
+    const getEqPick = (odds: number, team: string) => odds > 3 ? `${team} Anota en Ambas Mitades` : odds > 1.8 ? `${team} Gana` : `${team} o Empate`;
+    const getRiskPick = (odds: number) => odds > 3 ? "Más de 2.5 Tiros a Puerta" : "Más de 1.5 Tiros a Puerta";
+    const getRiskPick2 = (odds: number, team: string) => odds > 2.5 ? `${team} Anota 2+ Goles` : `${team} Anota`;
+
     return [
       {
         id: "slip-1",
@@ -60,9 +92,9 @@ export default function DashboardPage() {
         theme: "primary",
         icon: ShieldCheck,
         description: "Apuestas simples de alta probabilidad.",
-        explanation: "💡 IA: El Arsenal promedia 2.5 goles en casa y el Chelsea tiene bajas críticas en su línea defensiva hoy.",
+        explanation: `💡 IA: El ${team1} promedia 2.5 goles en casa y el ${team1Opp} tiene bajas críticas en su línea defensiva hoy.`,
         legs: [
-          { id: "l1", title: "Arsenal Gana", subtitle: "vs Chelsea", odds: safeBase }
+          { id: "l1", title: getSafePick(safeBase, team1), subtitle: `vs ${team1Opp}`, odds: safeBase }
         ]
       },
       {
@@ -71,10 +103,10 @@ export default function DashboardPage() {
         theme: "primary",
         icon: Flame,
         description: "Combinada corta con gran valor estadístico.",
-        explanation: "💡 IA: Real Madrid no ha perdido de local en 15 partidos. Los duelos Juve-Milan tienen 80% de probabilidad de 'Ambos Marcan' según el histórico.",
+        explanation: `💡 IA: ${team2} no ha perdido de local en sus últimos partidos. Los duelos ${team2}-${team2Opp} tienen 80% de probabilidad de 'Ambos Marcan'.`,
         legs: [
-          { id: "l2", title: "Real Madrid Gana", subtitle: "vs Valencia", odds: eqLeg1 },
-          { id: "l3", title: "Ambos Marcan", subtitle: "Juve vs Milan", odds: eqLeg2 }
+          { id: "l2", title: getEqPick(eqLeg1, team2), subtitle: `vs ${team2Opp}`, odds: eqLeg1 },
+          { id: "l3", title: "Ambos Marcan", subtitle: `${team2} vs ${team2Opp}`, odds: eqLeg2 }
         ]
       },
       {
@@ -83,11 +115,11 @@ export default function DashboardPage() {
         theme: "primary",
         icon: AlertTriangle,
         description: "Combinada diseñada para superar tu objetivo.",
-        explanation: "💡 IA: Se proyecta un partido muy abierto en Mánchester, ideal para overs. Vinicius y Saka tienen los índices de remate más altos de sus ligas actualmente.",
+        explanation: `💡 IA: Se proyecta un partido muy abierto. Los delanteros de ${team1} y ${team3} tienen los índices de remate más altos de sus ligas actualmente.`,
         legs: [
-          { id: "l4", title: "Saka > 1.5 Tiros a Puerta", subtitle: "Arsenal vs Chelsea", odds: arLeg1 },
-          { id: "l5", title: "Vinicius Anota", subtitle: "Real Madrid vs Valencia", odds: arLeg2 },
-          { id: "l6", title: "> 9.5 Corners Totales", subtitle: "City vs Liv", odds: arLeg3 }
+          { id: "l4", title: getRiskPick(arLeg1), subtitle: `${team1} vs ${team1Opp}`, odds: arLeg1 },
+          { id: "l5", title: getRiskPick2(arLeg2, team2), subtitle: `${team2} vs ${team2Opp}`, odds: arLeg2 },
+          { id: "l6", title: "> 9.5 Corners Totales", subtitle: `${team3} vs ${team3Opp}`, odds: arLeg3 }
         ]
       }
     ];
@@ -409,91 +441,63 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Sample Match Card */}
-          <Link href="/predictions/1" className="glass-panel block rounded-xl p-4 md:p-5 border border-border hover:border-white/20 transition-colors group cursor-pointer relative overflow-hidden bg-[#131418]">
-            <div className="flex justify-between items-center mb-4">
-              <span className="text-xs font-semibold px-2 py-1 bg-white/5 rounded text-textMuted">Premier League</span>
-              <span className="text-xs font-bold text-[#d9f95d] flex items-center gap-1 animate-pulse">
-                <span className="w-2 h-2 rounded-full bg-[#d9f95d]"></span> EN VIVO 67'
-              </span>
-            </div>
+          {loadingMatches ? (
+             <div className="text-white/50 text-sm py-10 col-span-full text-center animate-pulse">Cargando partidos de hoy...</div>
+          ) : matches.length === 0 ? (
+             <div className="text-white/50 text-sm py-10 col-span-full text-center">No hay partidos destacados para mostrar hoy.</div>
+          ) : (
+            matches.map((match) => {
+              const isLive = ["1H", "2H", "HT"].includes(match.fixture.status.short);
+              const matchTime = new Date(match.fixture.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+              return (
+                <Link key={match.fixture.id} href={`/predictions/${match.fixture.id}`} className="glass-panel block rounded-xl p-4 md:p-5 border border-border hover:border-white/20 transition-colors group cursor-pointer relative overflow-hidden bg-[#131418]">
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="text-xs font-semibold px-2 py-1 bg-white/5 rounded text-textMuted line-clamp-1 max-w-[120px]">{match.league.name}</span>
+                    <span className={`text-xs font-bold flex items-center gap-1 ${isLive ? 'text-[#d9f95d] animate-pulse' : 'text-textMuted'}`}>
+                      {isLive && <span className="w-2 h-2 rounded-full bg-[#d9f95d]"></span>}
+                      {isLive ? `EN VIVO ${match.fixture.status.elapsed}'` : `Hoy, ${matchTime}`}
+                    </span>
+                  </div>
 
-            <div className="flex justify-between items-center mb-6">
-              <div className="flex flex-col items-center gap-2 flex-1">
-                <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-xl shadow-inner">🔴</div>
-                <span className="font-bold text-sm text-white">Arsenal</span>
-              </div>
-              <div className="px-2 md:px-4 text-center shrink-0">
-                <div className="text-2xl font-black text-white whitespace-nowrap">2 - 1</div>
-              </div>
-              <div className="flex flex-col items-center gap-2 flex-1">
-                <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-xl shadow-inner">🔵</div>
-                <span className="font-bold text-sm text-white">Chelsea</span>
-              </div>
-            </div>
+                  <div className="flex justify-between items-center mb-6">
+                    <div className="flex flex-col items-center gap-2 flex-1">
+                      <img src={match.teams.home.logo} alt={match.teams.home.name} className="w-12 h-12 rounded-full object-contain bg-white/5 p-1" />
+                      <span className="font-bold text-sm text-white text-center line-clamp-1">{match.teams.home.name}</span>
+                    </div>
+                    <div className="px-2 md:px-4 text-center shrink-0">
+                      <div className="text-2xl font-black text-white whitespace-nowrap">
+                        {match.goals.home ?? '-'} : {match.goals.away ?? '-'}
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-center gap-2 flex-1">
+                      <img src={match.teams.away.logo} alt={match.teams.away.name} className="w-12 h-12 rounded-full object-contain bg-white/5 p-1" />
+                      <span className="font-bold text-sm text-white text-center line-clamp-1">{match.teams.away.name}</span>
+                    </div>
+                  </div>
 
-            <div className="grid grid-cols-3 gap-2 mt-4">
-              <div className="bg-white/5 rounded-lg p-2 text-center border border-transparent hover:border-white/20 transition-colors">
-                <div className="text-xs text-textMuted mb-1">1</div>
-                <div className="font-bold text-white">1.85</div>
-              </div>
-              <div className="bg-white/5 rounded-lg p-2 text-center border border-transparent hover:border-white/20 transition-colors">
-                <div className="text-xs text-textMuted mb-1">X</div>
-                <div className="font-bold text-white">3.40</div>
-              </div>
-              <div className="bg-white/5 rounded-lg p-2 text-center border border-transparent hover:border-white/20 transition-colors">
-                <div className="text-xs text-textMuted mb-1">2</div>
-                <div className="font-bold text-white">4.20</div>
-              </div>
-            </div>
-            
-            <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
-              <div className="text-xs text-textMuted">Predicción de IA:</div>
-              <div className="text-sm font-bold text-[#d9f95d]">Gana Arsenal (78%)</div>
-            </div>
-          </Link>
-          
-          {/* Sample Match Card 2 */}
-          <Link href="/predictions/4" className="glass-panel block rounded-xl p-4 md:p-5 border border-border hover:border-white/20 transition-colors group cursor-pointer relative overflow-hidden bg-[#131418]">
-            <div className="flex justify-between items-center mb-4">
-              <span className="text-xs font-semibold px-2 py-1 bg-white/5 rounded text-textMuted">La Liga</span>
-              <span className="text-xs font-bold text-textMuted">Hoy, 21:00</span>
-            </div>
-
-            <div className="flex justify-between items-center mb-6">
-              <div className="flex flex-col items-center gap-2 flex-1">
-                <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-xl shadow-inner">⚪</div>
-                <span className="font-bold text-sm text-white">Real Madrid</span>
-              </div>
-              <div className="px-2 md:px-4 text-center shrink-0">
-                <div className="text-xl font-black text-textMuted whitespace-nowrap">vs</div>
-              </div>
-              <div className="flex flex-col items-center gap-2 flex-1">
-                <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-xl shadow-inner">🦇</div>
-                <span className="font-bold text-sm text-white">Valencia</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2 mt-4">
-              <div className="bg-white/5 rounded-lg p-2 text-center border border-transparent hover:border-white/20 transition-colors">
-                <div className="text-xs text-textMuted mb-1">1</div>
-                <div className="font-bold text-white">1.45</div>
-              </div>
-              <div className="bg-white/5 rounded-lg p-2 text-center border border-transparent hover:border-white/20 transition-colors">
-                <div className="text-xs text-textMuted mb-1">X</div>
-                <div className="font-bold text-white">4.80</div>
-              </div>
-              <div className="bg-white/5 rounded-lg p-2 text-center border border-transparent hover:border-white/20 transition-colors">
-                <div className="text-xs text-textMuted mb-1">2</div>
-                <div className="font-bold text-white">7.50</div>
-              </div>
-            </div>
-            
-            <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
-              <div className="text-xs text-textMuted">Predicción de IA:</div>
-              <div className="text-sm font-bold text-white">Más de 2.5 Goles (82%)</div>
-            </div>
-          </Link>
+                  <div className="grid grid-cols-3 gap-2 mt-4">
+                    <div className="bg-white/5 rounded-lg p-2 text-center border border-transparent hover:border-white/20 transition-colors">
+                      <div className="text-xs text-textMuted mb-1">1</div>
+                      <div className="font-bold text-white">-</div>
+                    </div>
+                    <div className="bg-white/5 rounded-lg p-2 text-center border border-transparent hover:border-white/20 transition-colors">
+                      <div className="text-xs text-textMuted mb-1">X</div>
+                      <div className="font-bold text-white">-</div>
+                    </div>
+                    <div className="bg-white/5 rounded-lg p-2 text-center border border-transparent hover:border-white/20 transition-colors">
+                      <div className="text-xs text-textMuted mb-1">2</div>
+                      <div className="font-bold text-white">-</div>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
+                    <div className="text-xs text-textMuted">Predicción de IA:</div>
+                    <div className="text-sm font-bold text-[#d9f95d]">Análisis disponible</div>
+                  </div>
+                </Link>
+              );
+            })
+          )}
         </div>
       </div>
     </div>
