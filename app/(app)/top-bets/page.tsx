@@ -62,10 +62,13 @@ export default function TopBetsPage() {
   const team3H = m3 ? m3.teams.home.name : "Juventus";
   const team3A = m3 ? m3.teams.away.name : "Milan";
 
+  // Formatear tiempos reales
+  const getTime = (match: any) => match ? new Date(match.fixture.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "Próximamente";
+
   const safeBets = [
-    { id: 1, league: m1?.league.name || "Premier League", time: "Próximamente", teams: `${team1H} vs ${team1A}`, prediction: `Gana ${team1H} (1X2)`, confidence: "85%", odds: "1.85", reasoning: `${team1H} ha sido muy sólido de local recientemente y las estadísticas muestran superioridad táctica.` },
-    { id: 2, league: m2?.league.name || "La Liga", time: "Próximamente", teams: `${team2H} vs ${team2A}`, prediction: "Ambos Equipos Marcan (AEM)", confidence: "82%", odds: "1.75", reasoning: `Históricamente, los enfrentamientos entre ${team2H} y ${team2A} terminan con goles de ambos lados.` },
-    { id: 3, league: m3?.league.name || "Serie A", time: "Próximamente", teams: `${team3H} vs ${team3A}`, prediction: "Menos de 3.5 Goles", confidence: "78%", odds: "1.65", reasoning: `${team3H} tiene una defensa sólida en casa. Se proyecta un partido cerrado.` },
+    { id: 1, league: m1?.league.name || "Premier League", time: getTime(m1), teams: `${team1H} vs ${team1A}`, prediction: `Gana ${team1H} (1X2)`, confidence: "85%", odds: "1.85", reasoning: `${team1H} ha sido muy sólido de local recientemente y las estadísticas muestran superioridad táctica.` },
+    { id: 2, league: m2?.league.name || "La Liga", time: getTime(m2), teams: `${team2H} vs ${team2A}`, prediction: "Ambos Equipos Marcan (AEM)", confidence: "82%", odds: "1.75", reasoning: `Históricamente, los enfrentamientos entre ${team2H} y ${team2A} terminan con goles de ambos lados.` },
+    { id: 3, league: m3?.league.name || "Serie A", time: getTime(m3), teams: `${team3H} vs ${team3A}`, prediction: "Menos de 3.5 Goles", confidence: "78%", odds: "1.65", reasoning: `${team3H} tiene una defensa sólida en casa. Se proyecta un partido cerrado.` },
   ];
 
   const highRiskBets = [

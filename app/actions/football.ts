@@ -13,37 +13,48 @@ export async function getTodaysMatches(): Promise<APIFootballFixture[]> {
       return [];
     }
 
-    // Get current date in YYYY-MM-DD format
-    const today = new Date().toISOString().split('T')[0];
+    // Get current date and next few days
+    const today = new Date();
+    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+    const dayAfter = new Date(today); dayAfter.setDate(dayAfter.getDate() + 2);
 
-    const response = await fetch(`https://v3.football.api-sports.io/fixtures?date=${today}`, {
-      method: 'GET',
-      headers: {
-        'x-rapidapi-host': 'v3.football.api-sports.io',
-        'x-apisports-key': apiKey,
-      },
-      // Cache for 60 seconds to avoid exceeding API limits on page reloads
-      next: { revalidate: 60 }
-    });
+    const dates = [
+      today.toISOString().split('T')[0],
+      tomorrow.toISOString().split('T')[0],
+      dayAfter.toISOString().split('T')[0]
+    ];
 
-    if (!response.ok) {
-      console.error("Failed to fetch from API-Football:", response.status, response.statusText);
-      return [];
+    let allMatches: APIFootballFixture[] = [];
+
+    // Fetch up to 3 days until we have enough matches
+    for (const d of dates) {
+      const response = await fetch(`https://v3.football.api-sports.io/fixtures?date=${d}`, {
+        method: 'GET',
+        headers: {
+          'x-rapidapi-host': 'v3.football.api-sports.io',
+          'x-apisports-key': apiKey,
+        },
+        next: { revalidate: 60 }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.response && Array.isArray(data.response)) {
+          allMatches = [...allMatches, ...data.response];
+        }
+      }
     }
 
-    const data = await response.json();
-    
-    if (!data.response || !Array.isArray(data.response)) {
-      return [];
-    }
-
-    let matches: APIFootballFixture[] = data.response;
+    let matches = allMatches;
     
     // Filter by top leagues
     matches = matches.filter(m => TOP_LEAGUE_IDS.includes(m.league.id));
 
-    // Filter to only include matches that are upcoming, live, or finished today
-    // and sort them to prioritize LIVE matches, then upcoming, then finished.
+    // Filter out finished or cancelled matches (only keep Upcoming NS, and Live 1H, HT, 2H, ET, P)
+    const finishedStatuses = ['FT', 'AET', 'PEN', 'PST', 'CANC', 'ABD', 'AWD', 'WO'];
+    matches = matches.filter(m => !finishedStatuses.includes(m.fixture.status.short));
+
+    // Sort them to prioritize LIVE matches, then upcoming
     matches = matches.sort((a, b) => {
       const aLive = a.fixture.status.short === '1H' || a.fixture.status.short === '2H' || a.fixture.status.short === 'HT';
       const bLive = b.fixture.status.short === '1H' || b.fixture.status.short === '2H' || b.fixture.status.short === 'HT';
@@ -83,6 +94,11 @@ export async function getMatchesByDate(dateString: string): Promise<APIFootballF
     let matches: APIFootballFixture[] = data.response;
     // Filter by top leagues
     matches = matches.filter(m => TOP_LEAGUE_IDS.includes(m.league.id));
+    
+    // Filter out finished or cancelled matches
+    const finishedStatuses = ['FT', 'AET', 'PEN', 'PST', 'CANC', 'ABD', 'AWD', 'WO'];
+    matches = matches.filter(m => !finishedStatuses.includes(m.fixture.status.short));
+    
     // Sort by time
     matches = matches.sort((a, b) => new Date(a.fixture.date).getTime() - new Date(b.fixture.date).getTime());
     return matches;

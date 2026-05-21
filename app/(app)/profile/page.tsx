@@ -2,6 +2,7 @@ import { Settings, LogOut, Award, History, Bookmark } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import ProfileAvatar from "@/components/profile/ProfileAvatar";
+import { getTodaysMatches } from "@/app/actions/football";
 
 export default async function ProfilePage() {
   const supabase = createClient();
@@ -10,6 +11,8 @@ export default async function ProfilePage() {
   const email = user?.email || "usuario@ejemplo.com";
   const name = user?.user_metadata?.full_name || user?.user_metadata?.username || email.split("@")[0];
   const avatarSeed = user?.user_metadata?.avatar_seed || email;
+
+  const matches = await getTodaysMatches();
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 max-w-4xl mx-auto">
@@ -61,27 +64,32 @@ export default async function ProfilePage() {
              </div>
 
              <div className="space-y-4">
-               {[1, 2].map((i) => (
-                 <div key={i} className="bg-surface border border-transparent hover:border-border rounded-xl p-4 transition-colors flex flex-col md:flex-row justify-between items-center gap-4">
-                    <div className="w-full md:w-auto">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs bg-white/5 px-2 py-0.5 rounded text-textMuted">La Liga</span>
-                        <span className="text-xs text-textMuted">Mañana</span>
-                      </div>
-                      <div className="font-bold text-white text-sm">Real Madrid vs Valencia</div>
-                      <div className="text-primary text-xs font-medium">Over 2.5 Goals</div>
-                    </div>
-                    
-                    <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
-                      <div className="text-right">
-                        <div className="text-xl font-bold text-white">1.75</div>
-                      </div>
-                      <Link href={`/predictions/${i}`} className="bg-white/10 hover:bg-white/20 text-white font-semibold py-1.5 px-4 rounded-lg text-sm transition-colors text-center inline-block">
-                        Ver
-                      </Link>
-                    </div>
+               {matches.length === 0 ? (
+                 <div className="text-center py-6">
+                   <p className="text-sm text-textMuted">No tienes apuestas guardadas actualmente.</p>
                  </div>
-               ))}
+               ) : (
+                 matches.slice(0, 2).map((match) => (
+                   <Link href={`/predictions/${match.fixture.id}`} key={match.fixture.id} className="block bg-surface border border-transparent hover:border-border rounded-xl p-4 transition-colors group">
+                     <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                        <div className="w-full md:w-auto">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs bg-white/5 px-2 py-0.5 rounded text-textMuted">{match.league.name}</span>
+                            <span className="text-xs text-textMuted">{new Date(match.fixture.date).toLocaleDateString()}</span>
+                          </div>
+                          <div className="font-bold text-white text-sm">{match.teams.home.name} vs {match.teams.away.name}</div>
+                          <div className="text-primary text-xs font-medium">Predicción IA Disponible</div>
+                        </div>
+                        
+                        <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
+                          <div className="bg-white/10 group-hover:bg-white/20 text-white font-semibold py-1.5 px-4 rounded-lg text-sm transition-colors text-center inline-block">
+                            Ver Análisis
+                          </div>
+                        </div>
+                     </div>
+                   </Link>
+                 ))
+               )}
              </div>
           </div>
 
