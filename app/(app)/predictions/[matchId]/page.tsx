@@ -50,16 +50,16 @@ export default function PredictionDetailPage({ params }: { params: { matchId: st
           <span className="inline-block px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-textMuted mb-4 tracking-widest uppercase">
             Premier League
           </span>
-          <div className="flex justify-center items-center gap-8 md:gap-16">
+          <div className="flex justify-center items-center gap-4 sm:gap-8 md:gap-16">
             <div className="flex flex-col items-center">
               <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-surface border-4 border-white/5 flex items-center justify-center text-4xl shadow-2xl mb-4">🔴</div>
               <h2 className="text-xl md:text-2xl font-bold text-white">Arsenal</h2>
               <span className="text-sm text-textMuted mt-1">Local</span>
             </div>
             
-            <div className="flex flex-col items-center">
-              <div className="text-4xl md:text-5xl font-black text-white tracking-widest mb-2">2 - 1</div>
-              <span className="text-accent font-bold text-sm animate-pulse">EN VIVO 67'</span>
+            <div className="flex flex-col items-center shrink-0">
+              <div className="text-4xl md:text-5xl font-black text-white tracking-widest mb-2 whitespace-nowrap">2 - 1</div>
+              <span className="text-accent font-bold text-sm animate-pulse whitespace-nowrap">EN VIVO 67'</span>
             </div>
 
             <div className="flex flex-col items-center">

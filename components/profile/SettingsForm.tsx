@@ -9,6 +9,7 @@ export default function SettingsForm({ initialName, email }: { initialName: stri
   const [name, setName] = useState(initialName);
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [aiAlerts, setAiAlerts] = useState(false);
   const router = useRouter();
 
   const handleSaveProfile = async () => {
@@ -107,23 +108,26 @@ export default function SettingsForm({ initialName, email }: { initialName: stri
               <h2 className="text-xl font-bold text-white mb-6">Preferencias de Aplicación</h2>
               
               <div className="space-y-6">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-4">
                   <div>
                     <h4 className="text-white font-medium">Modo Oscuro Absoluto</h4>
                     <p className="text-sm text-textMuted">El diseño dark premium está activado por defecto.</p>
                   </div>
-                  <div className="w-12 h-6 bg-[#d9f95d] rounded-full relative cursor-not-allowed opacity-80">
+                  <div className="w-12 h-6 shrink-0 bg-[#d9f95d] rounded-full relative cursor-not-allowed opacity-80">
                     <div className="absolute right-1 top-1 w-4 h-4 bg-black rounded-full"></div>
                   </div>
                 </div>
                 
-                <div className="flex items-center justify-between border-t border-white/5 pt-6">
+                <div className="flex items-center justify-between border-t border-white/5 pt-6 gap-4">
                   <div>
                     <h4 className="text-white font-medium">Alertas de Inteligencia Artificial</h4>
                     <p className="text-sm text-textMuted">Recibir notificaciones cuando la IA detecte apuestas de altísimo valor.</p>
                   </div>
-                  <div className="w-12 h-6 bg-white/20 rounded-full relative cursor-pointer">
-                    <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full"></div>
+                  <div 
+                    onClick={() => setAiAlerts(!aiAlerts)}
+                    className={`w-12 h-6 shrink-0 rounded-full relative cursor-pointer transition-colors ${aiAlerts ? 'bg-[#d9f95d]' : 'bg-white/20'}`}
+                  >
+                    <div className={`absolute top-1 left-1 w-4 h-4 rounded-full transition-transform duration-200 ${aiAlerts ? 'bg-black translate-x-6' : 'bg-white translate-x-0'}`}></div>
                   </div>
                 </div>
               </div>

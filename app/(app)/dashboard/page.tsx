@@ -163,7 +163,16 @@ export default function DashboardPage() {
   return (
     <div className="space-y-12 animate-in fade-in duration-500 pb-10">
       {/* Generador de Fichas */}
-      <div className="max-w-md mx-auto mt-4">
+      <div className="max-w-md mx-auto mt-8 md:mt-10">
+        
+        {/* Título Elegante */}
+        <div className="text-center mb-8 px-4 animate-in slide-in-from-bottom-4 fade-in duration-700">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-black tracking-tighter text-white leading-[1.1]">
+            Tu dinero, <span className="text-white/60">Tu meta,</span><br />
+            <span className="text-[#d9f95d] inline-block mt-2">Nosotros la ficha.</span>
+          </h2>
+        </div>
+
         <div className="bg-[#0b0c10] border border-white/5 rounded-[2rem] p-5 md:p-8 shadow-2xl mb-10 relative">
           <form onSubmit={handleGenerate} className="space-y-6 relative z-10">
             {/* Cuanto Tienes */}
@@ -401,7 +410,7 @@ export default function DashboardPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Sample Match Card */}
-          <div className="glass-panel rounded-xl p-4 md:p-5 border border-border hover:border-white/20 transition-colors group cursor-pointer relative overflow-hidden bg-[#131418]">
+          <Link href="/predictions/1" className="glass-panel block rounded-xl p-4 md:p-5 border border-border hover:border-white/20 transition-colors group cursor-pointer relative overflow-hidden bg-[#131418]">
             <div className="flex justify-between items-center mb-4">
               <span className="text-xs font-semibold px-2 py-1 bg-white/5 rounded text-textMuted">Premier League</span>
               <span className="text-xs font-bold text-[#d9f95d] flex items-center gap-1 animate-pulse">
@@ -414,8 +423,8 @@ export default function DashboardPage() {
                 <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-xl shadow-inner">🔴</div>
                 <span className="font-bold text-sm text-white">Arsenal</span>
               </div>
-              <div className="px-4 text-center">
-                <div className="text-2xl font-black text-white">2 - 1</div>
+              <div className="px-2 md:px-4 text-center shrink-0">
+                <div className="text-2xl font-black text-white whitespace-nowrap">2 - 1</div>
               </div>
               <div className="flex flex-col items-center gap-2 flex-1">
                 <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-xl shadow-inner">🔵</div>
@@ -442,10 +451,10 @@ export default function DashboardPage() {
               <div className="text-xs text-textMuted">Predicción de IA:</div>
               <div className="text-sm font-bold text-[#d9f95d]">Gana Arsenal (78%)</div>
             </div>
-          </div>
+          </Link>
           
           {/* Sample Match Card 2 */}
-          <div className="glass-panel rounded-xl p-4 md:p-5 border border-border hover:border-white/20 transition-colors group cursor-pointer relative overflow-hidden bg-[#131418]">
+          <Link href="/predictions/4" className="glass-panel block rounded-xl p-4 md:p-5 border border-border hover:border-white/20 transition-colors group cursor-pointer relative overflow-hidden bg-[#131418]">
             <div className="flex justify-between items-center mb-4">
               <span className="text-xs font-semibold px-2 py-1 bg-white/5 rounded text-textMuted">La Liga</span>
               <span className="text-xs font-bold text-textMuted">Hoy, 21:00</span>
@@ -456,8 +465,8 @@ export default function DashboardPage() {
                 <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-xl shadow-inner">⚪</div>
                 <span className="font-bold text-sm text-white">Real Madrid</span>
               </div>
-              <div className="px-4 text-center">
-                <div className="text-xl font-black text-textMuted">vs</div>
+              <div className="px-2 md:px-4 text-center shrink-0">
+                <div className="text-xl font-black text-textMuted whitespace-nowrap">vs</div>
               </div>
               <div className="flex flex-col items-center gap-2 flex-1">
                 <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-xl shadow-inner">🦇</div>
@@ -484,7 +493,7 @@ export default function DashboardPage() {
               <div className="text-xs text-textMuted">Predicción de IA:</div>
               <div className="text-sm font-bold text-white">Más de 2.5 Goles (82%)</div>
             </div>
-          </div>
+          </Link>
         </div>
       </div>
     </div>
