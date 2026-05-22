@@ -44,9 +44,9 @@ async function fetchStatPalMatches(offset: number = 0): Promise<APIFootballFixtu
     let matches = l.match;
     if (!Array.isArray(matches)) matches = [matches];
 
-    // Normalize league name
+    // Normalize league name strictly. If it's not a top league, leave the country prefix so it doesn't false-match "Premier League".
     const normName = l.name.toLowerCase();
-    const cleanLeagueName = LEAGUE_MAPPING[normName] || (l.name.includes(': ') ? l.name.split(': ')[1] : l.name);
+    const cleanLeagueName = LEAGUE_MAPPING[normName] || l.name;
 
     matches.forEach((m: any) => {
       if (!m || !m.main_id) return;
