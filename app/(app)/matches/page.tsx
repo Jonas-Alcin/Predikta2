@@ -17,7 +17,12 @@ const LEAGUES = [
   { id: "primera-chile", name: "Primera División (CL)", flag: "https://flagcdn.com/w40/cl.png" },
 ];
 
-const getFormattedDate = (date: Date) => date.toISOString().split('T')[0];
+const getFormattedDate = (date: Date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
 const today = new Date();
 const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
 const dayAfter = new Date(today); dayAfter.setDate(dayAfter.getDate() + 2);
@@ -162,7 +167,10 @@ export default function MatchesPage() {
             <div className="divide-y divide-white/5">
               {(groupedMatches[league.name] || []).map((match) => {
                 const isLive = ["1H", "2H", "HT"].includes(match.fixture.status.short);
-                const timeStr = new Date(match.fixture.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const dateObj = new Date(match.fixture.date);
+                const timeStr = dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const dateStr = dateObj.toLocaleDateString([], { month: 'short', day: 'numeric' });
+                
                 return (
                   <Link href={`/predictions/${match.fixture.id}`} key={match.fixture.id} className="flex flex-col md:flex-row items-center justify-between p-3 md:p-4 md:px-6 hover:bg-white/5 transition-colors group cursor-pointer">
                     
@@ -181,12 +189,13 @@ export default function MatchesPage() {
                       </div>
                       
                       {/* Hora / Marcador */}
-                      <div className="flex flex-col items-center justify-center w-20 sm:w-24 md:w-32 shrink-0 px-2">
+                      <div className="flex flex-col items-center justify-center w-24 sm:w-28 md:w-32 shrink-0 px-2">
                         <span className={`font-bold text-[13px] sm:text-[14px] md:text-base tracking-wider text-center whitespace-nowrap ${isLive || match.fixture.status.short === 'FT' ? 'text-white' : 'text-[#d9f95d]'}`}>
                           {(isLive || match.fixture.status.short === 'FT') 
                             ? `${match.goals.home ?? 0} - ${match.goals.away ?? 0}` 
                             : timeStr}
                         </span>
+                        <span className="text-[10px] sm:text-xs text-textMuted font-medium uppercase tracking-widest mt-0.5">{dateStr}</span>
                       </div>
                       
                       {/* Equipo Visitante */}

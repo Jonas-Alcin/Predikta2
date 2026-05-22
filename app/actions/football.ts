@@ -101,40 +101,87 @@ async function fetchStatPalMatches(offset: number = 0): Promise<APIFootballFixtu
 
 export async function getTodaysMatches(): Promise<APIFootballFixture[]> {
   try {
-    let matches = await fetchStatPalMatches(0);
-    
-    // Sort to prioritize top leagues
-    matches = matches.sort((a, b) => {
-      const aTop = TOP_LEAGUES.includes(a.league.name);
-      const bTop = TOP_LEAGUES.includes(b.league.name);
-      if (aTop && !bTop) return -1;
-      if (!aTop && bTop) return 1;
-      return 0;
-    });
+    // Fetch multiple offsets to find upcoming matches
+    const offsetsToFetch = [-1, 0, 1, 2, 3];
+    const results = await Promise.all(
+      offsetsToFetch.map(async (offset) => {
+        try {
+          return await fetchStatPalMatches(offset);
+        } catch (e) {
+          return [];
+        }
+      })
+    );
 
-    return matches.slice(0, 6);
+    // Merge and deduplicate matches
+    let allMatches: APIFootballFixture[] = [];
+    const seenIds = new Set<number>();
+    
+    for (const matchArray of results) {
+      for (const m of matchArray) {
+        if (!seenIds.has(m.fixture.id)) {
+          seenIds.add(m.fixture.id);
+          allMatches.push(m);
+        }
+      }
+    }
+    
+    // Only keep top leagues
+    allMatches = allMatches.filter(m => TOP_LEAGUES.includes(m.league.name));
+    
+    // Filter out postponed/cancelled
+    allMatches = allMatches.filter(m => m.fixture.status.short !== 'PST');
+
+    // Filter out matches that are already finished
+    allMatches = allMatches.filter(m => m.fixture.status.short !== 'FT');
+
+    // Sort by time
+    allMatches = allMatches.sort((a, b) => new Date(a.fixture.date).getTime() - new Date(b.fixture.date).getTime());
+
+    return allMatches.slice(0, 6);
   } catch (error) {
-    console.error("Error fetching matches:", error);
+    console.error('Error fetching todays matches:', error);
     return [];
   }
 }
 
 export async function getMatchesByDate(dateString: string): Promise<APIFootballFixture[]> {
   try {
-    // Calculate offset based on target date vs today
     const targetDate = new Date(dateString);
-    const today = new Date();
-    // Normalize to midnight UTC to safely calculate day differences
-    const targetUTC = Date.UTC(targetDate.getUTCFullYear(), targetDate.getUTCMonth(), targetDate.getUTCDate());
-    const todayUTC = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+    const targetDateString = targetDate.toISOString().split('T')[0];
     
-    let offset = Math.round((targetUTC - todayUTC) / 86400000);
+    // Fetch multiple offsets since StatPal offsets don't correspond exactly to days
+    // offset 0 is live, offset 1 is usually next matchday, etc.
+    const offsetsToFetch = [-1, 0, 1, 2, 3];
+    const results = await Promise.all(
+      offsetsToFetch.map(async (offset) => {
+        try {
+          return await fetchStatPalMatches(offset);
+        } catch (e) {
+          return [];
+        }
+      })
+    );
+
+    // Merge and deduplicate matches by fixture ID
+    let allMatches: APIFootballFixture[] = [];
+    const seenIds = new Set<number>();
     
-    // Safety check just in case, clamp between -7 and 7
-    offset = Math.max(-7, Math.min(7, offset));
+    for (const matchArray of results) {
+      for (const m of matchArray) {
+        if (!seenIds.has(m.fixture.id)) {
+          seenIds.add(m.fixture.id);
+          allMatches.push(m);
+        }
+      }
+    }
     
-    let matches = await fetchStatPalMatches(offset);
-    
+    // Strict date filtering: Ensure the match date exactly matches the requested target date
+    let matches = allMatches.filter(m => {
+      const matchDate = new Date(m.fixture.date).toISOString().split('T')[0];
+      return matchDate === targetDateString;
+    });
+
     // Filter out postponed/cancelled just in case
     matches = matches.filter(m => m.fixture.status.short !== 'PST');
     

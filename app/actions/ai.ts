@@ -18,6 +18,10 @@ export type AIPredictionResult = {
 };
 
 export async function generatePredictionAnalysis(fixtureId: number): Promise<AIPredictionResult | null> {
+  const { getMatchById, getH2HStats, getTeamForm } = await import('@/app/actions/football');
+  const match = await getMatchById(fixtureId);
+  if (!match) return null;
+
   try {
     const supabase = createClient();
     const { data: authData } = await supabase.auth.getUser();
@@ -41,11 +45,6 @@ export async function generatePredictionAnalysis(fixtureId: number): Promise<AIP
     
     recentRequests.push(now);
     rateLimitMap.set(userId, recentRequests);
-
-    // 1. Get Match details from StatPal
-    const { getMatchById } = await import('@/app/actions/football');
-    const match = await getMatchById(fixtureId);
-    if (!match) throw new Error("Match not found");
 
     // 2. Prepare the prompt for Claude
     const anthropicKey = process.env.ANTHROPIC_API_KEY;
@@ -97,34 +96,33 @@ Debes responder ÚNICAMENTE con un objeto JSON válido usando esta estructura ex
     const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       console.error("No JSON object found in Claude response, returning fallback");
-      return getFallbackPrediction(match);
+      return await getFallbackPrediction(match, getH2HStats, getTeamForm);
     }
     
     return JSON.parse(jsonMatch[0]) as AIPredictionResult;
     
   } catch (error) {
     console.error("Error generating AI analysis:", error);
-    // Extraer match del scope superior si es posible, aunque aquí no tenemos acceso directo si falló antes.
-    // Para simplificar, devolvemos un fallback genérico.
-    return {
-      recommendedBet: "Gana Local o Empate (1X)",
-      confidence: 65,
-      odds: "1.50",
-      reasoning: "Análisis de contingencia: Según nuestro modelo predictivo automático, el equipo local muestra una ligera ventaja estadística en su estadio. (Generado por modelo de respaldo).",
-      alternatives: [
-        { title: "Menos de 3.5 goles", risk: "Bajo", odds: "1.35", confidence: 80 },
-        { title: "Ambos equipos marcan", risk: "Medio", odds: "1.90", confidence: 55 }
-      ]
-    };
+    return await getFallbackPrediction(match, getH2HStats, getTeamForm);
   }
 }
 
-function getFallbackPrediction(match: any): AIPredictionResult {
+async function getFallbackPrediction(match: any, getH2HStats: any, getTeamForm: any): Promise<AIPredictionResult> {
+  const h2h = await getH2HStats(match.teams.home.id, match.teams.away.id);
+  const homeForm = await getTeamForm(match.teams.home.id);
+  
+  let h2hText = h2h && h2h.total > 0 
+    ? `Históricamente, ${match.teams.home.name} ha ganado el ${Math.round((h2h.team1Wins/h2h.total)*100)}% de los duelos directos.`
+    : `No hay un historial reciente definitivo entre ambos.`;
+    
+  const homeWins = homeForm.filter((f: string) => f === 'W').length;
+  let formText = `El equipo local ha ganado ${homeWins} de sus últimos 5 partidos.`;
+
   return {
     recommendedBet: `Doble Oportunidad: ${match.teams.home.name} o Empate`,
     confidence: 70,
     odds: "1.45",
-    reasoning: `Basado en métricas históricas de la liga, ${match.teams.home.name} tiene una ventaja estadística jugando en casa contra ${match.teams.away.name}. Este es un análisis automático de contingencia.`,
+    reasoning: `Análisis Estadístico: ${h2hText} ${formText} Basado puramente en métricas y estado de forma reciente (contingencia sin IA), el equipo local tiene una ventaja proyectada.`,
     alternatives: [
       { title: "Más de 1.5 goles", risk: "Bajo", odds: "1.30", confidence: 85 },
       { title: "Empate al descanso", risk: "Medio", odds: "2.10", confidence: 50 }
