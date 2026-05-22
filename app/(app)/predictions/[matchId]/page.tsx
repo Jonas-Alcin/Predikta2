@@ -3,7 +3,7 @@
 import { ArrowLeft, ShieldCheck, Zap, Activity, Info, Check, Bookmark, BookmarkCheck } from "lucide-react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { getMatchById } from "@/app/actions/football";
+import { getMatchById, getTeamForm, getH2HStats } from "@/app/actions/football";
 import { generatePredictionAnalysis, type AIPredictionResult } from "@/app/actions/ai";
 import { saveBet, removeSavedBet, isBetSaved, logAnalysis } from "@/app/actions/db";
 import { APIFootballFixture } from "@/lib/types";
@@ -16,6 +16,11 @@ export default function PredictionDetailPage({ params }: { params: { matchId: st
   const [aiAnalysis, setAiAnalysis] = useState<AIPredictionResult | null>(null);
   const [analyzing, setAnalyzing] = useState(true);
   const [saved, setSaved] = useState(false);
+  
+  const [formHome, setFormHome] = useState<string[]>([]);
+  const [formAway, setFormAway] = useState<string[]>([]);
+  const [h2h, setH2h] = useState<{team1Wins: number, team2Wins: number, draws: number, total: number} | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
 
   useEffect(() => {
     async function loadMatch() {
@@ -26,6 +31,17 @@ export default function PredictionDetailPage({ params }: { params: { matchId: st
       if (data) {
         const savedStatus = await isBetSaved(Number(params.matchId));
         setSaved(savedStatus);
+
+        Promise.all([
+          getTeamForm(data.teams.home.id),
+          getTeamForm(data.teams.away.id),
+          getH2HStats(data.teams.home.id, data.teams.away.id)
+        ]).then(([homeF, awayF, h2hData]) => {
+          setFormHome(homeF);
+          setFormAway(awayF);
+          setH2h(h2hData);
+          setStatsLoading(false);
+        });
 
         const analysis = await generatePredictionAnalysis(Number(params.matchId));
         setAiAnalysis(analysis);
@@ -229,45 +245,71 @@ export default function PredictionDetailPage({ params }: { params: { matchId: st
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="glass-panel border border-border rounded-2xl p-6">
                <h4 className="text-white font-semibold mb-4">Forma Reciente</h4>
-               <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-textMuted">{match.teams.home.name}</span>
-                    <div className="flex gap-1">
-                      {['W','W','W','D','W'].map((r, i) => (
-                        <span key={i} className={`w-6 h-6 rounded flex items-center justify-center text-xs font-bold ${r === 'W' ? 'bg-accent/20 text-accent' : r === 'D' ? 'bg-white/10 text-textMuted' : 'bg-danger/20 text-danger'}`}>{r}</span>
-                      ))}
+               {statsLoading ? (
+                 <div className="space-y-4 animate-pulse">
+                   <div className="h-6 bg-white/5 rounded"></div>
+                   <div className="h-6 bg-white/5 rounded"></div>
+                 </div>
+               ) : (
+                 <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-textMuted truncate mr-2">{match.teams.home.name}</span>
+                      <div className="flex gap-1 shrink-0">
+                        {formHome.map((r, i) => (
+                          <span key={i} className={`w-6 h-6 rounded flex items-center justify-center text-xs font-bold ${r === 'W' ? 'bg-accent/20 text-accent' : r === 'D' ? 'bg-white/10 text-textMuted' : 'bg-danger/20 text-danger'}`}>{r}</span>
+                        ))}
+                        {formHome.length === 0 && <span className="text-xs text-textMuted">N/A</span>}
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-textMuted">{match.teams.away.name}</span>
-                    <div className="flex gap-1">
-                      {['L','D','L','W','L'].map((r, i) => (
-                        <span key={i} className={`w-6 h-6 rounded flex items-center justify-center text-xs font-bold ${r === 'W' ? 'bg-accent/20 text-accent' : r === 'D' ? 'bg-white/10 text-textMuted' : 'bg-danger/20 text-danger'}`}>{r}</span>
-                      ))}
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-textMuted truncate mr-2">{match.teams.away.name}</span>
+                      <div className="flex gap-1 shrink-0">
+                        {formAway.map((r, i) => (
+                          <span key={i} className={`w-6 h-6 rounded flex items-center justify-center text-xs font-bold ${r === 'W' ? 'bg-accent/20 text-accent' : r === 'D' ? 'bg-white/10 text-textMuted' : 'bg-danger/20 text-danger'}`}>{r}</span>
+                        ))}
+                        {formAway.length === 0 && <span className="text-xs text-textMuted">N/A</span>}
+                      </div>
                     </div>
-                  </div>
-               </div>
+                 </div>
+               )}
             </div>
 
             <div className="glass-panel border border-border rounded-2xl p-6">
                <h4 className="text-white font-semibold mb-4">Estadísticas H2H</h4>
-               <div className="space-y-3">
-                 <div className="flex justify-between text-sm">
-                   <span className="text-textMuted">Victorias del {match.teams.home.name}</span>
-                   <span className="text-white font-bold">45%</span>
+               {statsLoading ? (
+                 <div className="space-y-3 animate-pulse">
+                   <div className="h-4 bg-white/5 rounded w-1/2"></div>
+                   <div className="h-2 bg-white/5 rounded-full"></div>
+                   <div className="h-4 bg-white/5 rounded w-1/2 mt-2"></div>
+                   <div className="h-2 bg-white/5 rounded-full"></div>
                  </div>
-                 <div className="w-full bg-surface rounded-full h-2">
-                   <div className="bg-primary h-2 rounded-full" style={{ width: '45%' }}></div>
+               ) : h2h && h2h.total > 0 ? (
+                 <div className="space-y-3">
+                   <div className="flex justify-between text-sm">
+                     <span className="text-textMuted truncate mr-2">{match.teams.home.name}</span>
+                     <span className="text-white font-bold">{Math.round((h2h.team1Wins / h2h.total) * 100)}%</span>
+                   </div>
+                   <div className="w-full bg-surface rounded-full h-2">
+                     <div className="bg-primary h-2 rounded-full" style={{ width: `${(h2h.team1Wins / h2h.total) * 100}%` }}></div>
+                   </div>
+                   
+                   <div className="flex justify-between text-sm mt-2">
+                     <span className="text-textMuted truncate mr-2">{match.teams.away.name}</span>
+                     <span className="text-white font-bold">{Math.round((h2h.team2Wins / h2h.total) * 100)}%</span>
+                   </div>
+                   <div className="w-full bg-surface rounded-full h-2">
+                     <div className="bg-secondary h-2 rounded-full" style={{ width: `${(h2h.team2Wins / h2h.total) * 100}%` }}></div>
+                   </div>
+                   
+                   {h2h.draws > 0 && (
+                     <div className="text-center text-xs text-textMuted mt-2">
+                       {Math.round((h2h.draws / h2h.total) * 100)}% de empates en {h2h.total} partidos
+                     </div>
+                   )}
                  </div>
-                 
-                 <div className="flex justify-between text-sm mt-2">
-                   <span className="text-textMuted">Victorias del {match.teams.away.name}</span>
-                   <span className="text-white font-bold">30%</span>
-                 </div>
-                 <div className="w-full bg-surface rounded-full h-2">
-                   <div className="bg-secondary h-2 rounded-full" style={{ width: '30%' }}></div>
-                 </div>
-               </div>
+               ) : (
+                 <div className="text-sm text-textMuted text-center py-4">No hay historial H2H reciente</div>
+               )}
             </div>
           </div>
         </div>
