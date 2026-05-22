@@ -48,7 +48,7 @@ export default function NotificationBell({ hasUser }: { hasUser: boolean }) {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-[#0b0c10] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute -right-2 sm:right-0 mt-2 w-[90vw] max-w-[360px] sm:w-96 bg-[#0b0c10] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="p-4 border-b border-white/5 flex items-center justify-between bg-[#131418]">
             <h3 className="font-bold text-white flex items-center gap-2">
               <Bell className="w-4 h-4 text-[#d9f95d]" /> Notificaciones

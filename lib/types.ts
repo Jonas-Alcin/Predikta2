@@ -200,6 +200,7 @@ export interface APIFootballFixture {
     date: string;
     status: {
       short: string; // "NS", "1H", "HT", "2H", "FT"
+      long: string;
       elapsed: number | null;
     };
   };

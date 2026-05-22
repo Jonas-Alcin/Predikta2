@@ -50,7 +50,7 @@ export async function saveBet(data: Omit<SavedBet, "id" | "created_at">) {
     const { error } = await supabase.from("saved_bets").insert({
       user_id: authData.user.id,
       ...parsedData
-    });
+    } as any);
 
     if (error) {
       console.error("Error saving bet:", error);
@@ -154,7 +154,7 @@ export async function logAnalysis(data: Omit<AnalysisHistory, "id" | "created_at
     const { error } = await supabase.from("analysis_history").insert({
       user_id: authData.user.id,
       ...parsedData
-    });
+    } as any);
 
     if (error) return { success: false, error: error.message };
     return { success: true };
