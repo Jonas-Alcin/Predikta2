@@ -65,7 +65,8 @@ async function fetchStatPalMatches(offset: number = 0): Promise<APIFootballFixtu
           date: isoDate,
           status: {
             short: m.status === 'Not Started' ? 'NS' : m.status === 'Postp.' ? 'PST' : 'LIVE',
-            long: m.status
+            long: m.status,
+            elapsed: null
           }
         },
         league: {

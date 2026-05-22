@@ -207,8 +207,9 @@ export interface APIFootballFixture {
   league: {
     id: number;
     name: string;
-    country: string;
+    country?: string;
     logo: string;
+    season?: number;
   };
   teams: {
     home: {
