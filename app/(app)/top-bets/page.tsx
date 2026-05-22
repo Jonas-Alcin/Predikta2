@@ -135,7 +135,15 @@ export default function TopBetsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {activeTab === "seguras" ? (
+        {matches.length === 0 ? (
+          <div className="col-span-full py-20 flex flex-col items-center justify-center text-center bg-surface border border-white/5 rounded-3xl">
+            <ShieldCheck className="w-16 h-16 text-textMuted mb-4 opacity-50" />
+            <h3 className="text-xl font-bold text-white mb-2">No hay apuestas destacadas</h3>
+            <p className="text-textMuted max-w-md">
+              Actualmente no hay partidos próximos en las ligas principales para generar apuestas seguras. Vuelve más tarde cuando la cartelera se actualice.
+            </p>
+          </div>
+        ) : activeTab === "seguras" ? (
           // Render Safe Bets (Simples)
           safeBets.map((bet) => (
             <div key={bet.id} className="bg-[#131418] border border-[#d9f95d]/30 hover:border-[#d9f95d] rounded-3xl p-6 transition-all relative flex flex-col h-full group">
@@ -178,8 +186,8 @@ export default function TopBetsPage() {
               <div className="border-t border-white/10 pt-4 mt-auto">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <span className="text-xs text-textMuted uppercase font-bold tracking-wider block">Cuota Total</span>
-                    <span className="text-xl font-black text-white">{bet.odds}</span>
+                     <span className="text-xs text-textMuted uppercase font-bold tracking-wider block">Cuota Total</span>
+                     <span className="text-xl font-black text-white">{bet.odds}</span>
                   </div>
                 </div>
                 <button 
@@ -222,7 +230,7 @@ export default function TopBetsPage() {
                 <div className="absolute left-[4px] top-3 bottom-8 w-[2px] bg-white/10"></div>
                 
                 <div className="space-y-5">
-                  {bet.legs.map((leg, idx) => (
+                  {bet.legs.map((leg: any, idx: number) => (
                     <div key={idx} className="relative flex items-start group">
                       <div className="absolute left-0 top-1.5 w-[10px] h-[10px] rounded-full border-[2.5px] border-[#d9f95d] bg-[#131418] z-10"></div>
                       <div className="flex-1 pl-5 pr-2">
