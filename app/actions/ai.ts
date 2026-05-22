@@ -79,7 +79,7 @@ Debes responder ÚNICAMENTE con un objeto JSON válido usando esta estructura ex
 `;
 
     const msg = await anthropic.messages.create({
-      model: "claude-3-5-sonnet-latest",
+      model: "claude-3-5-sonnet-20241022",
       max_tokens: 500,
       temperature: 0.5, // Slightly higher temperature since it needs to hallucinate stats
       messages: [
