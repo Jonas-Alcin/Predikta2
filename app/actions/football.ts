@@ -41,6 +41,9 @@ async function fetchStatPalLive(): Promise<APIFootballFixture[]> {
         }
       } catch(e) {}
 
+      // Clean up league name (e.g. "Italy: Serie A" -> "Serie A")
+      const cleanLeagueName = l.name.includes(': ') ? l.name.split(': ')[1] : l.name;
+
       allMatches.push({
         fixture: {
           id: Number(m.main_id),
@@ -52,7 +55,7 @@ async function fetchStatPalLive(): Promise<APIFootballFixture[]> {
         },
         league: {
           id: Number(l.id || 0),
-          name: l.name,
+          name: cleanLeagueName,
           logo: '',
           season: new Date().getFullYear()
         },
@@ -60,13 +63,13 @@ async function fetchStatPalLive(): Promise<APIFootballFixture[]> {
           home: {
             id: Number(m.home?.id || 0),
             name: m.home?.name || 'Unknown',
-            logo: '',
+            logo: `https://ui-avatars.com/api/?name=${encodeURIComponent(m.home?.name || 'U')}&background=131418&color=fff&bold=true`,
             winner: null
           },
           away: {
             id: Number(m.away?.id || 0),
             name: m.away?.name || 'Unknown',
-            logo: '',
+            logo: `https://ui-avatars.com/api/?name=${encodeURIComponent(m.away?.name || 'U')}&background=131418&color=fff&bold=true`,
             winner: null
           }
         },
