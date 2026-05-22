@@ -448,14 +448,17 @@ export default function DashboardPage() {
           ) : (
             matches.map((match) => {
               const isLive = ["1H", "2H", "HT"].includes(match.fixture.status.short);
-              const matchTime = new Date(match.fixture.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+              const matchDateObj = new Date(match.fixture.date);
+              const matchTime = matchDateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+              const matchDateStr = matchDateObj.toLocaleDateString([], { month: 'short', day: 'numeric' });
+              
               return (
                 <Link key={match.fixture.id} href={`/predictions/${match.fixture.id}`} className="glass-panel block rounded-xl p-4 md:p-5 border border-border hover:border-white/20 transition-colors group cursor-pointer relative overflow-hidden bg-[#131418]">
                   <div className="flex justify-between items-center mb-4">
                     <span className="text-xs font-semibold px-2 py-1 bg-white/5 rounded text-textMuted line-clamp-1 max-w-[120px]">{match.league.name}</span>
-                    <span className={`text-xs font-bold flex items-center gap-1 ${isLive ? 'text-[#d9f95d] animate-pulse' : 'text-textMuted'}`}>
+                    <span className={`text-xs font-bold flex items-center gap-1 ${isLive ? 'text-[#d9f95d] animate-pulse' : 'text-textMuted uppercase'}`}>
                       {isLive && <span className="w-2 h-2 rounded-full bg-[#d9f95d]"></span>}
-                      {isLive ? `EN VIVO ${match.fixture.status.elapsed}'` : `Hoy, ${matchTime}`}
+                      {isLive ? `EN VIVO ${match.fixture.status.elapsed}'` : `${matchDateStr}, ${matchTime}`}
                     </span>
                   </div>
 
