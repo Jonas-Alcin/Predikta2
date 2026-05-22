@@ -1,6 +1,13 @@
 "use server";
 
 import Anthropic from "@anthropic-ai/sdk";
+import { createClient } from "@/lib/supabase/server";
+
+// Rate limiting state (in-memory map)
+// Map of user_id -> Array of timestamps
+const rateLimitMap = new Map<string, number[]>();
+const RATE_LIMIT_MAX = 5; // max requests
+const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
 
 export type AIPredictionResult = {
   recommendedBet: string;
@@ -12,6 +19,29 @@ export type AIPredictionResult = {
 
 export async function generatePredictionAnalysis(fixtureId: number): Promise<AIPredictionResult | null> {
   try {
+    const supabase = createClient();
+    const { data: authData } = await supabase.auth.getUser();
+    
+    if (!authData.user) {
+      console.warn("Unauthorized attempt to access AI");
+      return null;
+    }
+
+    const userId = authData.user.id;
+    const now = Date.now();
+    const userRequests = rateLimitMap.get(userId) || [];
+    
+    // Clean old requests
+    const recentRequests = userRequests.filter(timestamp => now - timestamp < RATE_LIMIT_WINDOW_MS);
+    
+    if (recentRequests.length >= RATE_LIMIT_MAX) {
+      console.warn(`Rate limit exceeded for user ${userId}`);
+      throw new Error("Rate limit exceeded. Try again later.");
+    }
+    
+    recentRequests.push(now);
+    rateLimitMap.set(userId, recentRequests);
+
     const apiKey = process.env.API_FOOTBALL_KEY;
     if (!apiKey) throw new Error("Missing API_FOOTBALL_KEY");
 
@@ -82,7 +112,6 @@ Debes responder ÚNICAMENTE con un objeto JSON válido usando esta estructura ex
 
     // Parse the JSON response
     const textResponse = msg.content[0].type === 'text' ? msg.content[0].text : '{}';
-    console.log("Claude Raw Response:", textResponse);
     
     // Extract JSON from potential text wrapper
     const jsonMatch = textResponse.match(/\{[\s\S]*\}/);

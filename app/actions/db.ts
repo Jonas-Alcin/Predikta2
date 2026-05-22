@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { z } from "zod";
 
 export type SavedBet = {
   id: string;
@@ -26,8 +27,21 @@ export type AnalysisHistory = {
   created_at: string;
 };
 
+const SavedBetSchema = z.object({
+  fixture_id: z.number().int().positive(),
+  league_name: z.string().max(100),
+  team_home: z.string().max(100),
+  team_away: z.string().max(100),
+  match_date: z.string().datetime({ offset: true }).or(z.string()),
+  bet_type: z.string().max(50),
+  prediction_text: z.string().max(300),
+  odds: z.string().max(20)
+});
+
 export async function saveBet(data: Omit<SavedBet, "id" | "created_at">) {
   try {
+    const parsedData = SavedBetSchema.parse(data);
+
     const supabase = createClient();
     const { data: authData } = await supabase.auth.getUser();
     
@@ -35,7 +49,7 @@ export async function saveBet(data: Omit<SavedBet, "id" | "created_at">) {
 
     const { error } = await supabase.from("saved_bets").insert({
       user_id: authData.user.id,
-      ...data
+      ...parsedData
     });
 
     if (error) {
@@ -110,8 +124,19 @@ export async function getSavedBets(): Promise<SavedBet[]> {
   }
 }
 
+const AnalysisHistorySchema = z.object({
+  fixture_id: z.number().int().positive(),
+  league_name: z.string().max(100),
+  team_home: z.string().max(100),
+  team_away: z.string().max(100),
+  match_date: z.string().datetime({ offset: true }).or(z.string()),
+  analysis_summary: z.string().max(1500)
+});
+
 export async function logAnalysis(data: Omit<AnalysisHistory, "id" | "created_at">) {
   try {
+    const parsedData = AnalysisHistorySchema.parse(data);
+
     const supabase = createClient();
     const { data: authData } = await supabase.auth.getUser();
     
@@ -121,14 +146,14 @@ export async function logAnalysis(data: Omit<AnalysisHistory, "id" | "created_at
     const { data: existing } = await supabase.from("analysis_history")
       .select("id")
       .eq("user_id", authData.user.id)
-      .eq("fixture_id", data.fixture_id)
+      .eq("fixture_id", parsedData.fixture_id)
       .single();
 
     if (existing) return { success: true };
 
     const { error } = await supabase.from("analysis_history").insert({
       user_id: authData.user.id,
-      ...data
+      ...parsedData
     });
 
     if (error) return { success: false, error: error.message };
