@@ -47,15 +47,17 @@ export default function PredictionDetailPage({ params }: { params: { matchId: st
         setAiAnalysis(analysis);
         setAnalyzing(false);
 
-        // Registrar en el historial
-        await logAnalysis({
-          fixture_id: data.fixture.id,
-          league_name: data.league.name,
-          team_home: data.teams.home.name,
-          team_away: data.teams.away.name,
-          match_date: data.fixture.date,
-          analysis_summary: analysis.reasoning,
-        });
+        // Registrar en el historial solo si el análisis se generó exitosamente
+        if (analysis) {
+          await logAnalysis({
+            fixture_id: data.fixture.id,
+            league_name: data.league.name,
+            team_home: data.teams.home.name,
+            team_away: data.teams.away.name,
+            match_date: data.fixture.date,
+            analysis_summary: analysis.reasoning,
+          });
+        }
       } else {
         setAnalyzing(false);
       }

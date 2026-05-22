@@ -114,9 +114,16 @@ export async function getMatchesByDate(dateString: string): Promise<APIFootballF
     // Filter out postponed/cancelled just in case
     matches = matches.filter(m => m.fixture.status.short !== 'PST');
     
-    // Sort by time
-    matches = matches.sort((a, b) => new Date(a.fixture.date).getTime() - new Date(b.fixture.date).getTime());
-    return matches.slice(0, 20); // limits to 20 matches for the UI
+    // Sort to prioritize top leagues FIRST, then by time
+    matches = matches.sort((a, b) => {
+      const aTop = TOP_LEAGUES.some(tl => a.league.name.includes(tl));
+      const bTop = TOP_LEAGUES.some(tl => b.league.name.includes(tl));
+      if (aTop && !bTop) return -1;
+      if (!aTop && bTop) return 1;
+      return new Date(a.fixture.date).getTime() - new Date(b.fixture.date).getTime();
+    });
+
+    return matches.slice(0, 30); // Return up to 30 matches for the matches page
   } catch (error) {
     console.error("Error fetching matches by date:", error);
     return [];
