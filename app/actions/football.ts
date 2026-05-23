@@ -10,7 +10,7 @@ const LEAGUE_MAPPING: Record<string, string> = {
   'germany: bundesliga': 'Bundesliga',
   'france: ligue 1': 'Ligue 1',
   'brazil: serie a': 'Brasileirão',
-  'chile: primera division': 'Primera División (CL)',
+  'chile: liga de primera': 'Primera División (CL)',
   'europe: uefa champions league': 'Champions League',
   'europe: uefa europa league': 'Europa League',
 };

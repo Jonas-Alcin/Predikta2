@@ -125,24 +125,21 @@ Responde ÚNICAMENTE con un JSON válido usando esta estructura exacta:
     
     const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      return await getFallbackPrediction(targetMatch, todaysMatches);
+      return getFallbackPrediction(targetMatch);
     }
     
     return JSON.parse(jsonMatch[0]) as AIPredictionResult;
     
   } catch (error) {
-    console.error("Error generating AI analysis:", error);
-    return await getFallbackPrediction(targetMatch, await getTodaysMatches());
+    console.error("AI Analysis failed:", error);
+    return getFallbackPrediction(targetMatch);
   }
 }
 
-async function getFallbackPrediction(match: any, todaysMatches: any[]): Promise<AIPredictionResult> {
-  const dateStr = new Date(match.fixture.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-  const t1 = match.teams.home.name;
-  const t2 = match.teams.away.name;
-  
-  const m2 = todaysMatches.length > 0 ? todaysMatches[0] : match;
-  const m3 = todaysMatches.length > 1 ? todaysMatches[1] : match;
+function getFallbackPrediction(targetMatch: any): AIPredictionResult {
+  const t1 = targetMatch.teams.home.name;
+  const t2 = targetMatch.teams.away.name;
+  const dateStr = "Hoy";
 
   return {
     reasoning: `Análisis Estadístico de Contingencia activado por falta de conexión IA.`,
