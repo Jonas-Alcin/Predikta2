@@ -2,12 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Activity, Target, User } from "lucide-react";
+import { Home, Activity, User } from "lucide-react";
 
 const navItems = [
   { name: "Panel", href: "/dashboard", icon: Home },
   { name: "Partidos", href: "/matches", icon: Activity },
-  { name: "Apuestas", href: "/top-bets", icon: Target },
   { name: "Perfil", href: "/profile", icon: User },
 ];
 

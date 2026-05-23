@@ -1,39 +1,33 @@
 "use client";
 
-import { Trophy, ChevronRight, ShieldCheck, Flame, AlertTriangle, Edit2, Copy, Check, X, Plus, Trash2, Info } from "lucide-react";
+import { Trophy, ShieldCheck, Flame, AlertTriangle, Copy, Check } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { getTodaysMatches } from "@/app/actions/football";
 import { APIFootballFixture } from "@/lib/types";
+
 type BetLeg = {
   id: string;
   title: string;
   subtitle: string;
-  odds: number;
+  date: string;
+  leagueIcon?: string;
 };
 
 type Slip = {
   id: string;
   type: string;
   description: string;
-  explanation: string;
-  theme: "primary" | "white";
   icon: any;
   legs: BetLeg[];
 };
 
 export default function DashboardPage() {
-  const [budget, setBudget] = useState("");
-  const [target, setTarget] = useState("");
   const [generated, setGenerated] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  
-  // States for slips and editing
   const [slips, setSlips] = useState<Slip[]>([]);
-  const [editingSlipId, setEditingSlipId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  // States for real API matches
   const [matches, setMatches] = useState<APIFootballFixture[]>([]);
   const [loadingMatches, setLoadingMatches] = useState(true);
 
@@ -46,82 +40,80 @@ export default function DashboardPage() {
     loadMatches();
   }, []);
 
-  const numBudget = Number(budget) || 0;
-  const numTarget = Number(target) || 0;
-  
-  const multiplier = numBudget > 0 && numTarget > 0 
-    ? (numTarget / numBudget).toFixed(1) 
-    : "0.0";
-
-  const generateMockSlips = (mult: number): Slip[] => {
-    const safeBase = Math.max(1.50, mult * 0.25);
-    const balancedBase = Math.max(3.00, mult * 0.6);
-    const riskBase = Math.max(6.00, mult * 1.5); // Alto Riesgo must always be higher than the target mult
-
-    // Equilibrada math: leg1 * leg2 = balancedBase
-    const eqLeg1 = Math.sqrt(balancedBase) * 0.85;
-    const eqLeg2 = balancedBase / eqLeg1;
-
-    // Alto Riesgo math: leg1 * leg2 * leg3 = riskBase
-    const arLeg1 = Math.cbrt(riskBase) * 0.9;
-    const arLeg2 = Math.cbrt(riskBase) * 1.1;
-    const arLeg3 = riskBase / (arLeg1 * arLeg2);
-
-    // Usar solo partidos reales que NO hayan terminado
+  const generateSlips = (): Slip[] => {
     const upcomingMatches = matches.filter(m => !["FT", "AET", "PEN", "PST", "CANC", "ABD"].includes(m.fixture.status.short));
     
-    const m1 = upcomingMatches.length > 0 ? upcomingMatches[0] : null;
-    const m2 = upcomingMatches.length > 1 ? upcomingMatches[1] : m1;
-    const m3 = upcomingMatches.length > 2 ? upcomingMatches[2] : m1;
+    // We need up to 5 unique matches if possible, else we loop them.
+    const m = (index: number) => upcomingMatches[index % upcomingMatches.length] || null;
     
-    const team1 = m1 ? m1.teams.home.name : "Arsenal";
-    const team1Opp = m1 ? m1.teams.away.name : "Chelsea";
-    const team2 = m2 ? m2.teams.home.name : "Real Madrid";
-    const team2Opp = m2 ? m2.teams.away.name : "Valencia";
-    const team3 = m3 ? m3.teams.away.name : "Man City";
-    const team3Opp = m3 ? m3.teams.home.name : "Liverpool";
+    const getLeg = (matchIndex: number, type: "winner" | "goals" | "corners" | "player" | "cards") => {
+      const match = m(matchIndex);
+      if (!match) return { id: `mock-${Math.random()}`, title: "Apuesta", subtitle: "Partido", date: "Hoy", leagueIcon: undefined };
+      
+      const teamH = match.teams.home.name;
+      const teamA = match.teams.away.name;
+      const date = new Date(match.fixture.date).toLocaleString([], {day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit'});
+      const lg = match.league.logo;
+      
+      let title = "";
+      if (type === "winner") title = `Gana ${teamH} o Empate`;
+      else if (type === "goals") title = "Más de 1.5 Goles Totales";
+      else if (type === "corners") title = `Más de 8.5 Córners Totales`;
+      else if (type === "player") {
+        const players: Record<string, string> = {
+          "Arsenal": "Saka", "Chelsea": "Palmer", "Real Madrid": "Vinícius Jr", 
+          "Valencia": "Hugo Duro", "Man City": "Haaland", "Liverpool": "Salah", 
+          "Barcelona": "Lewandowski", "Sevilla": "En-Nesyri"
+        };
+        const playerName = players[teamH] || "Goleador Principal";
+        title = `Gol de ${playerName}`;
+      }
+      else if (type === "cards") title = `Más de 3.5 Tarjetas Amarillas`;
 
-    // Ajustar el texto de las apuestas según las cuotas para que sea realista
-    const getSafePick = (odds: number, team: string) => odds > 4 ? `Gana ${team} y +3.5 Goles` : odds > 2 ? `Gana ${team} y Ambos Marcan` : odds > 1.5 ? `Gana ${team}` : `${team} o Empate`;
-    const getEqPick = (odds: number, team: string) => odds > 3 ? `${team} Anota en Ambas Mitades` : odds > 1.8 ? `${team} Gana` : `${team} o Empate`;
-    const getRiskPick = (odds: number) => odds > 3 ? "Más de 2.5 Tiros a Puerta" : "Más de 1.5 Tiros a Puerta";
-    const getRiskPick2 = (odds: number, team: string) => odds > 2.5 ? `${team} Anota 2+ Goles` : `${team} Anota`;
+      return {
+        id: `leg-${match.fixture.id}-${type}`,
+        title,
+        subtitle: `${teamH} vs ${teamA}`,
+        date,
+        leagueIcon: lg
+      };
+    };
 
     return [
       {
         id: "slip-1",
         type: "Conservadora",
-        theme: "primary",
         icon: ShieldCheck,
-        description: "Apuestas simples de alta probabilidad.",
-        explanation: `💡 IA: El ${team1} promedia 2.5 goles en casa y el ${team1Opp} tiene bajas críticas en su línea defensiva hoy.`,
+        description: "Al menos 3 selecciones muy seguras basadas en historial.",
         legs: [
-          { id: "l1", title: getSafePick(safeBase, team1), subtitle: `vs ${team1Opp}`, odds: safeBase }
+          getLeg(0, "winner"),
+          getLeg(1, "winner"),
+          getLeg(2, "goals")
         ]
       },
       {
         id: "slip-2",
         type: "Equilibrada",
-        theme: "primary",
         icon: Flame,
-        description: "Combinada corta con gran valor estadístico.",
-        explanation: `💡 IA: ${team2} no ha perdido de local en sus últimos partidos. Los duelos ${team2}-${team2Opp} tienen 80% de probabilidad de 'Ambos Marcan'.`,
+        description: "Más de 3 selecciones balanceadas con goles y córners.",
         legs: [
-          { id: "l2", title: getEqPick(eqLeg1, team2), subtitle: `vs ${team2Opp}`, odds: eqLeg1 },
-          { id: "l3", title: "Ambos Marcan", subtitle: `${team2} vs ${team2Opp}`, odds: eqLeg2 }
+          getLeg(0, "winner"),
+          getLeg(1, "goals"),
+          getLeg(2, "corners"),
+          getLeg(3, "winner")
         ]
       },
       {
         id: "slip-3",
         type: "Alto Riesgo",
-        theme: "primary",
         icon: AlertTriangle,
-        description: "Combinada diseñada para superar tu objetivo.",
-        explanation: `💡 IA: Se proyecta un partido muy abierto. Los delanteros de ${team1} y ${team3} tienen los índices de remate más altos de sus ligas actualmente.`,
+        description: "Al menos 5 selecciones avanzadas (jugadores, tarjetas, etc).",
         legs: [
-          { id: "l4", title: getRiskPick(arLeg1), subtitle: `${team1} vs ${team1Opp}`, odds: arLeg1 },
-          { id: "l5", title: getRiskPick2(arLeg2, team2), subtitle: `${team2} vs ${team2Opp}`, odds: arLeg2 },
-          { id: "l6", title: "> 9.5 Corners Totales", subtitle: `${team3} vs ${team3Opp}`, odds: arLeg3 }
+          getLeg(0, "winner"),
+          getLeg(1, "goals"),
+          getLeg(2, "corners"),
+          getLeg(3, "player"),
+          getLeg(4, "cards")
         ]
       }
     ];
@@ -129,25 +121,20 @@ export default function DashboardPage() {
 
   const handleGenerate = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!budget || !target) return;
-    
     setIsGenerating(true);
     setGenerated(false);
     
     setTimeout(() => {
-      setSlips(generateMockSlips(Number(multiplier)));
+      setSlips(generateSlips());
       setIsGenerating(false);
       setGenerated(true);
     }, 1500);
   };
 
-  const handleCopy = (slip: Slip) => {
-    const totalOdds = slip.legs.reduce((acc, leg) => acc * leg.odds, 1);
+  const handleBetAction = (slip: Slip, url: string) => {
     const text = `🎯 Predikta AI - Ficha ${slip.type}\n` +
-      slip.legs.map(l => `✅ ${l.title} (${l.subtitle}) - Cuota: ${l.odds.toFixed(2)}`).join('\n') + 
-      `\n📈 Cuota Total: ${totalOdds.toFixed(2)}\n💰 A apostar: $${numBudget}`;
+      slip.legs.map(l => `✅ ${l.title} (${l.subtitle})`).join('\n');
     
-    // Copy with fallback
     if (navigator.clipboard && window.isSecureContext) {
       navigator.clipboard.writeText(text);
     } else {
@@ -159,270 +146,106 @@ export default function DashboardPage() {
       textArea.select();
       try {
         document.execCommand('copy');
-      } catch (error) {
-        console.error(error);
-      } finally {
+      } catch (error) {} finally {
         textArea.remove();
       }
     }
     
     setCopiedId(slip.id);
     setTimeout(() => setCopiedId(null), 2000);
-  };
-
-  const removeLeg = (slipId: string, legId: string) => {
-    setSlips(prev => prev.map(slip => {
-      if (slip.id === slipId) {
-        return { ...slip, legs: slip.legs.filter(l => l.id !== legId) };
-      }
-      return slip;
-    }));
-  };
-
-  const addMockLeg = (slipId: string) => {
-    const mockLeg = { 
-      id: Date.now().toString(), 
-      title: "Más de 1.5 Goles", 
-      subtitle: "Partido Adicional", 
-      odds: 1.45 
-    };
-    setSlips(prev => prev.map(slip => {
-      if (slip.id === slipId) {
-        return { ...slip, legs: [...slip.legs, mockLeg] };
-      }
-      return slip;
-    }));
+    window.open(url, '_blank');
   };
 
   return (
     <div className="space-y-12 animate-in fade-in duration-500 pb-10">
-      {/* Generador de Fichas */}
-      <div className="max-w-md mx-auto mt-8 md:mt-10">
-        
-        {/* Título Elegante */}
-        <div className="text-center mb-8 px-4 animate-in slide-in-from-bottom-4 fade-in duration-700">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-black tracking-tighter text-white leading-[1.1]">
-            Tu dinero, <span className="text-white/60">Tu meta,</span><br />
-            <span className="text-[#d9f95d] inline-block mt-2">Nosotros la ficha.</span>
-          </h2>
-        </div>
+      <div className="max-w-xl mx-auto mt-8 md:mt-12 text-center px-4">
+        <h2 className="text-3xl md:text-5xl font-black tracking-tighter text-white leading-[1.1] mb-6">
+          Generador de <span className="text-[#d9f95d]">Fichas</span>
+        </h2>
+        <p className="text-textMuted text-sm md:text-base mb-8">
+          Obtén 3 combinadas optimizadas por IA basadas en estadísticas reales de los partidos de hoy.
+        </p>
 
-        <div className="bg-[#0b0c10] border border-white/5 rounded-[2rem] p-5 md:p-8 shadow-2xl mb-10 relative">
-          <form onSubmit={handleGenerate} className="space-y-6 relative z-10">
-            {/* Cuanto Tienes */}
-            <div className="space-y-2">
-              <div className="flex justify-between items-end text-[10px] font-bold tracking-[0.2em] text-[#666666] uppercase">
-                <span>¿Cuánto tienes?</span>
-                <span>CLP $</span>
-              </div>
-              <div className="bg-[#131418] border border-white/5 rounded-2xl flex items-center px-4 py-3 md:px-5 md:py-4 focus-within:border-white/10 transition-colors">
-                <span className="text-[#666666] font-bold text-lg md:text-xl mr-3">$</span>
-                <input 
-                  type="number" 
-                  value={budget}
-                  onChange={(e) => setBudget(e.target.value)}
-                  placeholder="2000"
-                  className="bg-transparent text-white text-xl md:text-2xl font-medium outline-none w-full placeholder:text-white/20"
-                />
-              </div>
-            </div>
-
-            {/* Cuanto Quieres Ganar */}
-            <div className="space-y-2">
-              <div className="flex justify-between items-end text-[10px] font-bold tracking-[0.2em] text-[#666666] uppercase">
-                <span>¿Cuánto quieres ganar?</span>
-                <span>CLP $</span>
-              </div>
-              <div className="bg-[#131418] border border-white/5 rounded-2xl flex items-center px-4 py-3 md:px-5 md:py-4 focus-within:border-[#d9f95d]/30 transition-colors">
-                <span className="text-[#666666] font-bold text-lg md:text-xl mr-3">$</span>
-                <input 
-                  type="number" 
-                  value={target}
-                  onChange={(e) => setTarget(e.target.value)}
-                  placeholder="25000"
-                  className="bg-transparent text-[#d9f95d] text-xl md:text-2xl font-medium outline-none w-full placeholder:text-[#d9f95d]/20"
-                />
-              </div>
-            </div>
-
-            {/* Multiplicador */}
-            <div className="bg-[#131418] border border-[#d9f95d]/20 rounded-2xl flex justify-between items-center px-4 py-4 md:px-5 md:py-5 mt-2">
-              <span className="text-[10px] font-bold tracking-[0.2em] text-[#666666] uppercase">Necesitas multiplicar</span>
-              <span className="text-[#d9f95d] text-2xl md:text-3xl font-medium tracking-tight">
-                x{multiplier}
-              </span>
-            </div>
-
-            {/* Botón */}
-            <button 
-              type="submit"
-              disabled={isGenerating || !budget || !target}
-              className="w-full bg-[#d9f95d] hover:bg-[#c8ea4f] text-black font-bold py-3 md:py-4 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-2 text-sm md:text-[15px] tracking-wide uppercase mt-4 disabled:opacity-50"
-            >
-              {isGenerating ? "Generando..." : "🎯 Ver mis fichas"}
-            </button>
-          </form>
-        </div>
-
-        {/* Cómo Funciona */}
-        <div className="px-2">
-          <div className="flex items-center gap-2 mb-6">
-            <div className="w-1 h-4 bg-[#d9f95d] rounded-sm"></div>
-            <h4 className="text-[#666666] font-bold tracking-[0.2em] text-[10px] uppercase">¿Cómo funciona?</h4>
-          </div>
-          <ul className="space-y-4">
-            <li className="flex items-start gap-4">
-              <span className="text-[#d9f95d] font-mono text-sm mt-0.5">01</span>
-              <span className="text-[#888888] text-sm">Ingresas cuánto tienes y cuánto quieres ganar</span>
-            </li>
-            <li className="flex items-start gap-4">
-              <span className="text-[#d9f95d] font-mono text-sm mt-0.5">02</span>
-              <span className="text-[#888888] text-sm">Calculamos el multiplicador que necesitas</span>
-            </li>
-            <li className="flex items-start gap-4">
-              <span className="text-[#d9f95d] font-mono text-sm mt-0.5">03</span>
-              <span className="text-[#888888] text-sm">Te mostramos fichas con partidos y estadísticas reales</span>
-            </li>
-            <li className="flex items-start gap-4">
-              <span className="text-[#d9f95d] font-mono text-sm mt-0.5">04</span>
-              <span className="text-[#888888] text-sm">Copia la ficha y pégala en Betsson, Coolbet u otra casa de apuestas</span>
-            </li>
-          </ul>
-        </div>
+        <form onSubmit={handleGenerate}>
+          <button 
+            type="submit"
+            disabled={isGenerating || loadingMatches}
+            className="w-full bg-[#d9f95d] hover:bg-[#c8ea4f] text-black font-bold py-4 md:py-5 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-2 text-lg tracking-wide uppercase disabled:opacity-50"
+          >
+            {isGenerating ? "Analizando Partidos..." : "🎯 Generar Fichas Ahora"}
+          </button>
+        </form>
       </div>
 
-      {/* Resultados de Fichas */}
       {generated && (
-        <div className="pt-8 border-t border-border animate-in slide-in-from-bottom-8 duration-500">
-           <h2 className="text-2xl font-bold text-white mb-6 text-center">Fichas Generadas para ti</h2>
-           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+        <div className="pt-8 animate-in slide-in-from-bottom-8 duration-500">
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto px-4">
              {slips.map((slip) => {
                const Icon = slip.icon;
-               const isPrimary = slip.theme === "primary";
-               const colorClass = isPrimary ? "text-[#d9f95d]" : "text-white";
-               const borderClass = isPrimary ? "border-[#d9f95d]/30 hover:border-[#d9f95d]" : "border-white/10 hover:border-white/30";
-               const totalOdds = slip.legs.reduce((acc, leg) => acc * leg.odds, 1);
-               const isEditing = editingSlipId === slip.id;
 
                return (
-                 <div key={slip.id} className={`bg-[#131418] border ${borderClass} rounded-3xl p-6 transition-all relative flex flex-col h-full group ${isEditing ? 'ring-2 ring-white/20' : ''}`}>
-                   {isPrimary && <div className="absolute top-0 left-0 w-full h-1 bg-[#d9f95d]"></div>}
-                   
-                   {/* Cabecera */}
-                   <div className="flex items-center justify-between mb-3">
+                 <div key={slip.id} className="bg-[#f0f2f5] rounded-3xl overflow-hidden shadow-2xl flex flex-col h-full border border-gray-200">
+                   {/* Cabecera Oscura */}
+                   <div className="bg-[#2d2f3a] text-white p-4 flex items-center justify-between relative overflow-hidden">
+                     <div className="flex items-center gap-2 relative z-10">
+                       <Icon className="text-white w-5 h-5" />
+                       <span className="font-bold text-lg">{slip.type}</span>
+                     </div>
+                     <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-[#b5d33a] to-[#d9f95d] transform skew-x-12 translate-x-4 flex items-center justify-center">
+                        <span className="skew-x-[-12deg] font-black text-sm text-black">IA Pick</span>
+                     </div>
+                   </div>
+
+                   {/* Notificación de Confianza */}
+                   <div className="bg-[#f4fbdf] border-b border-[#d9f95d]/30 px-4 py-2 flex items-center gap-2">
+                     <ShieldCheck className="w-4 h-4 text-[#799900]" />
+                     <span className="text-xs font-bold text-[#799900]">Alta confianza estadística</span>
+                   </div>
+
+                   {/* Lista de Partidos */}
+                   <div className="p-4 space-y-4 flex-grow bg-white">
+                     {slip.legs.map((leg, idx) => (
+                       <div key={leg.id} className="relative">
+                         <div className="flex items-start gap-3">
+                           <div className="mt-1">
+                             {leg.leagueIcon ? (
+                               <img src={leg.leagueIcon} alt="League" className="w-6 h-6 object-contain" />
+                             ) : (
+                               <div className="w-6 h-6 bg-gray-200 rounded-full"></div>
+                             )}
+                           </div>
+                           <div className="flex-1">
+                             <div className="font-bold text-gray-900 text-sm leading-tight mb-1">{leg.title}</div>
+                             <div className="text-xs text-gray-600 mb-0.5">{leg.subtitle}</div>
+                             <div className="text-[11px] text-gray-500">{leg.date}</div>
+                           </div>
+                         </div>
+                         {idx < slip.legs.length - 1 && (
+                           <div className="border-b border-dashed border-gray-300 my-3 ml-9"></div>
+                         )}
+                       </div>
+                     ))}
+                   </div>
+
+                   {/* Footer con Casas de Apuestas */}
+                   <div className="bg-gray-50 p-4 border-t border-gray-200 mt-auto">
+                     <p className="text-center text-xs text-gray-500 font-bold mb-3 uppercase tracking-wider">Apostar esta ficha en:</p>
                      <div className="flex items-center gap-2">
-                       <Icon className={`${colorClass} w-6 h-6`} />
-                       <span className={`font-bold text-lg ${colorClass}`}>{slip.type}</span>
-                     </div>
-                     <div className="flex gap-2">
-                       <button 
-                         onClick={() => setEditingSlipId(isEditing ? null : slip.id)} 
-                         className={`p-1.5 rounded-md transition-colors ${isEditing ? 'bg-white/10 text-white' : 'text-textMuted hover:text-white hover:bg-white/5'}`}
-                         title={isEditing ? "Terminar edición" : "Editar selecciones"}
-                       >
-                         <Edit2 className="w-4 h-4" />
+                       <button onClick={() => handleBetAction(slip, 'https://www.betano.com')} className="flex-1 py-2 rounded-lg text-xs font-bold transition-colors bg-[#ff6b00] text-white hover:bg-[#e56000] border border-[#d65a00] shadow-sm">
+                         Betano
                        </button>
-                       <button 
-                         onClick={() => handleCopy(slip)} 
-                         className="p-1.5 rounded-md text-textMuted hover:text-[#d9f95d] hover:bg-white/5 transition-colors"
-                         title="Copiar ficha"
-                       >
-                         {copiedId === slip.id ? <Check className="w-4 h-4 text-[#d9f95d]" /> : <Copy className="w-4 h-4" />}
+                       <button onClick={() => handleBetAction(slip, 'https://1xbet.com')} className="flex-1 py-2 rounded-lg text-xs font-bold transition-colors bg-[#1e2329] text-white hover:bg-[#121518] border border-gray-900 shadow-sm">
+                         1xBet
+                       </button>
+                       <button onClick={() => handleBetAction(slip, 'https://jugabet.cl')} className="flex-1 py-2 rounded-lg text-xs font-bold transition-colors bg-[#ffffff] text-[#001d4a] hover:bg-gray-100 border border-[#001d4a] shadow-sm">
+                         JugaBet
                        </button>
                      </div>
-                   </div>
-
-                   <p className="text-sm text-textMuted mb-4">{slip.description}</p>
-                   
-                   {/* Explicación IA */}
-                   <div className="bg-[#181a20] border border-white/5 rounded-xl p-3 mb-6 relative overflow-hidden">
-                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#d9f95d]/50 to-transparent"></div>
-                     <p className="text-[12px] text-white/80 font-medium leading-relaxed pl-2">
-                       {slip.explanation}
-                     </p>
-                   </div>
-
-                   {/* Selecciones (Legs) - Timeline Style */}
-                   <div className="relative mb-6 flex-grow mt-2">
-                     {slip.legs.length > 1 && (
-                       <div className="absolute left-[4px] top-3 bottom-8 w-[2px] bg-white/10"></div>
+                     {copiedId === slip.id && (
+                       <div className="mt-3 text-center text-xs font-bold text-green-600 flex items-center justify-center gap-1">
+                         <Check className="w-3 h-3" /> Ficha y selecciones copiadas al portapapeles
+                       </div>
                      )}
-                     
-                     <div className="space-y-5">
-                       {slip.legs.map((leg) => (
-                         <div key={leg.id} className="relative flex items-start group">
-                           {/* Timeline Node */}
-                           <div className="absolute left-0 top-1.5 w-[10px] h-[10px] rounded-full border-[2.5px] border-[#d9f95d] bg-[#131418] z-10"></div>
-                           
-                           <div className="flex-1 pl-5 pr-2">
-                             <span className="font-bold text-white text-sm block leading-tight">{leg.title}</span>
-                             <span className="text-[11px] text-textMuted block mt-0.5">{leg.subtitle}</span>
-                           </div>
-                           
-                           <div className="flex items-center gap-3">
-                             <span className="text-white font-bold text-sm">{leg.odds.toFixed(2)}</span>
-                             <button 
-                               onClick={() => removeLeg(slip.id, leg.id)}
-                               className="text-textMuted hover:text-danger p-1 transition-colors"
-                               title="Eliminar selección"
-                             >
-                               <Trash2 className="w-4 h-4" />
-                             </button>
-                           </div>
-                         </div>
-                       ))}
-                       
-                       {isEditing && (
-                         <button 
-                           onClick={() => addMockLeg(slip.id)}
-                           className="w-full py-2.5 mt-4 border border-dashed border-white/20 rounded-xl text-xs font-bold text-textMuted hover:text-white hover:border-white/50 transition-colors flex items-center justify-center gap-1 bg-white/5 hover:bg-white/10"
-                         >
-                           <Plus className="w-4 h-4" /> Añadir selección
-                         </button>
-                       )}
-                       
-                       {slip.legs.length === 0 && !isEditing && (
-                         <div className="text-center text-textMuted text-sm py-4">
-                           No hay selecciones. Edita la ficha para agregar.
-                         </div>
-                       )}
-                     </div>
-                   </div>
-
-                   {/* Info Box */}
-                   {slip.legs.length > 0 && (
-                     <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 flex gap-2 mb-4">
-                       <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                       <p className="text-[10px] text-textMuted leading-snug">
-                         Si un jugador no inicia, se anularán sus selecciones vinculadas. Las cuotas se volverán a calcular para las selecciones restantes.
-                       </p>
-                     </div>
-                   )}
-
-                   {/* Footer */}
-                   <div className="border-t border-white/10 pt-4 mt-auto">
-                     <div className="flex items-center justify-between mb-4">
-                       <div>
-                         <span className="text-xs text-textMuted uppercase font-bold tracking-wider block">Cuota Total</span>
-                         <span className="text-xl font-black text-white">{totalOdds.toFixed(2)}</span>
-                       </div>
-                       <div className="text-right">
-                         <span className="text-xs text-textMuted uppercase font-bold tracking-wider block">Retorno</span>
-                         <span className={`text-xl font-black ${colorClass}`}>${(numBudget * totalOdds).toFixed(0)}</span>
-                       </div>
-                     </div>
-                     <button 
-                       onClick={() => handleCopy(slip)} 
-                       className={`w-full py-3.5 rounded-xl text-sm font-bold transition-colors flex justify-center items-center gap-2 ${
-                         isPrimary ? "bg-[#d9f95d] text-black hover:bg-[#c8ea4f]" : "bg-white/10 text-white hover:bg-white/20"
-                       }`}
-                     >
-                       {copiedId === slip.id ? (
-                         <><Check className="w-4 h-4" /> ¡Ficha Copiada!</>
-                       ) : (
-                         "COPIAR Y APOSTAR"
-                       )}
-                     </button>
                    </div>
                  </div>
                );
@@ -430,81 +253,6 @@ export default function DashboardPage() {
            </div>
         </div>
       )}
-
-      {/* Partidos Destacados */}
-      <div className="pt-8">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Trophy className="text-[#d9f95d]" /> Partidos Destacados
-          </h2>
-          <Link href="/matches" className="text-sm font-medium text-textMuted hover:text-white flex items-center transition-colors">
-            Ver todos <ChevronRight className="w-4 h-4" />
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {loadingMatches ? (
-             <div className="text-white/50 text-sm py-10 col-span-full text-center animate-pulse">Cargando partidos de hoy...</div>
-          ) : matches.length === 0 ? (
-             <div className="text-white/50 text-sm py-10 col-span-full text-center">No hay partidos destacados para mostrar hoy.</div>
-          ) : (
-            matches.map((match) => {
-              const isLive = ["1H", "2H", "HT"].includes(match.fixture.status.short);
-              const matchDateObj = new Date(match.fixture.date);
-              const matchTime = matchDateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-              const matchDateStr = matchDateObj.toLocaleDateString([], { month: 'short', day: 'numeric' });
-              
-              return (
-                <Link key={match.fixture.id} href={`/predictions/${match.fixture.id}`} className="glass-panel block rounded-xl p-4 md:p-5 border border-border hover:border-white/20 transition-colors group cursor-pointer relative overflow-hidden bg-[#131418]">
-                  <div className="flex justify-between items-center mb-4">
-                    <span className="text-xs font-semibold px-2 py-1 bg-white/5 rounded text-textMuted line-clamp-1 max-w-[120px]">{match.league.name}</span>
-                    <span className={`text-xs font-bold flex items-center gap-1 ${isLive ? 'text-[#d9f95d] animate-pulse' : 'text-textMuted uppercase'}`}>
-                      {isLive && <span className="w-2 h-2 rounded-full bg-[#d9f95d]"></span>}
-                      {isLive ? `EN VIVO ${match.fixture.status.elapsed}'` : `${matchDateStr}, ${matchTime}`}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-center mb-6">
-                    <div className="flex flex-col items-center gap-2 flex-1">
-                      <img src={match.teams.home.logo} alt={match.teams.home.name} className="w-12 h-12 rounded-full object-contain bg-white/5 p-1" />
-                      <span className="font-bold text-sm text-white text-center line-clamp-1">{match.teams.home.name}</span>
-                    </div>
-                    <div className="px-2 md:px-4 text-center shrink-0">
-                      <div className="text-2xl font-black text-white whitespace-nowrap">
-                        {match.goals.home ?? '-'} : {match.goals.away ?? '-'}
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-center gap-2 flex-1">
-                      <img src={match.teams.away.logo} alt={match.teams.away.name} className="w-12 h-12 rounded-full object-contain bg-white/5 p-1" />
-                      <span className="font-bold text-sm text-white text-center line-clamp-1">{match.teams.away.name}</span>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2 mt-4">
-                    <div className="bg-white/5 rounded-lg p-2 text-center border border-transparent hover:border-white/20 transition-colors">
-                      <div className="text-xs text-textMuted mb-1">1</div>
-                      <div className="font-bold text-white">-</div>
-                    </div>
-                    <div className="bg-white/5 rounded-lg p-2 text-center border border-transparent hover:border-white/20 transition-colors">
-                      <div className="text-xs text-textMuted mb-1">X</div>
-                      <div className="font-bold text-white">-</div>
-                    </div>
-                    <div className="bg-white/5 rounded-lg p-2 text-center border border-transparent hover:border-white/20 transition-colors">
-                      <div className="text-xs text-textMuted mb-1">2</div>
-                      <div className="font-bold text-white">-</div>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
-                    <div className="text-xs text-textMuted">Predicción de IA:</div>
-                    <div className="text-sm font-bold text-[#d9f95d]">Análisis disponible</div>
-                  </div>
-                </Link>
-              );
-            })
-          )}
-        </div>
-      </div>
     </div>
   );
 }

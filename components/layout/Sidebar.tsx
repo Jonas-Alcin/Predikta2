@@ -1,11 +1,10 @@
 import Link from "next/link";
-import { Home, Trophy, Activity, Target, User } from "lucide-react";
+import { Home, Trophy, Activity, User, LayoutDashboard } from "lucide-react";
 
 const navItems = [
-  { name: "Panel", href: "/dashboard", icon: Home },
+  { name: "Panel Principal", href: "/dashboard", icon: LayoutDashboard },
   { name: "Partidos", href: "/matches", icon: Activity },
-  { name: "Mejores Apuestas", href: "/top-bets", icon: Target },
-  { name: "Perfil", href: "/profile", icon: User },
+  { name: "Mi Perfil", href: "/profile", icon: User },
 ];
 
 export default function Sidebar() {
