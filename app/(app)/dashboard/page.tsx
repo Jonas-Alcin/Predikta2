@@ -67,10 +67,12 @@ export default function DashboardPage() {
     const arLeg2 = Math.cbrt(riskBase) * 1.1;
     const arLeg3 = riskBase / (arLeg1 * arLeg2);
 
-    // Usar partidos reales de la API en lugar de estáticos si están disponibles
-    const m1 = matches.length > 0 ? matches[0] : null;
-    const m2 = matches.length > 1 ? matches[1] : m1;
-    const m3 = matches.length > 2 ? matches[2] : m1;
+    // Usar solo partidos reales que NO hayan terminado
+    const upcomingMatches = matches.filter(m => !["FT", "AET", "PEN", "PST", "CANC", "ABD"].includes(m.fixture.status.short));
+    
+    const m1 = upcomingMatches.length > 0 ? upcomingMatches[0] : null;
+    const m2 = upcomingMatches.length > 1 ? upcomingMatches[1] : m1;
+    const m3 = upcomingMatches.length > 2 ? upcomingMatches[2] : m1;
     
     const team1 = m1 ? m1.teams.home.name : "Arsenal";
     const team1Opp = m1 ? m1.teams.away.name : "Chelsea";

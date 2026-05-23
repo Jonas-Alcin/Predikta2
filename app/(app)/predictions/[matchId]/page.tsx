@@ -43,20 +43,25 @@ export default function PredictionDetailPage({ params }: { params: { matchId: st
           setStatsLoading(false);
         });
 
-        const analysis = await generatePredictionAnalysis(Number(params.matchId));
-        setAiAnalysis(analysis);
-        setAnalyzing(false);
+        const isFinished = ["FT", "AET", "PEN", "PST", "CANC", "ABD"].includes(data.fixture.status.short);
+        
+        if (!isFinished) {
+          const analysis = await generatePredictionAnalysis(Number(params.matchId));
+          setAiAnalysis(analysis);
+          setAnalyzing(false);
 
-        // Registrar en el historial solo si el análisis se generó exitosamente
-        if (analysis) {
-          await logAnalysis({
-            fixture_id: data.fixture.id,
-            league_name: data.league.name,
-            team_home: data.teams.home.name,
-            team_away: data.teams.away.name,
-            match_date: data.fixture.date,
-            analysis_summary: analysis.reasoning,
-          });
+          if (analysis) {
+            await logAnalysis({
+              fixture_id: data.fixture.id,
+              league_name: data.league.name,
+              team_home: data.teams.home.name,
+              team_away: data.teams.away.name,
+              match_date: data.fixture.date,
+              analysis_summary: analysis.reasoning,
+            });
+          }
+        } else {
+          setAnalyzing(false);
         }
       } else {
         setAnalyzing(false);
@@ -221,13 +226,18 @@ export default function PredictionDetailPage({ params }: { params: { matchId: st
                     </div>
                   </>
                 ) : (
-                  <div className="text-textMuted">Error al generar análisis de IA</div>
+                  <div className="text-textMuted font-medium flex items-center gap-2">
+                    <Info className="w-5 h-5" />
+                    {["FT", "AET", "PEN", "PST", "CANC", "ABD"].includes(match.fixture.status.short) 
+                      ? "Partido Finalizado. Las apuestas están cerradas." 
+                      : "Error al generar análisis de IA"}
+                  </div>
                 )}
              </div>
 
              <div>
                 <h4 className="text-white font-semibold mb-3 flex items-center gap-2">
-                  <Info className="w-4 h-4 text-textMuted" /> Razonamiento de IA
+                  <Info className="w-4 h-4 text-textMuted" /> ¿Por qué esta ficha?
                 </h4>
                 {analyzing ? (
                   <div className="animate-pulse space-y-2 mb-4">
