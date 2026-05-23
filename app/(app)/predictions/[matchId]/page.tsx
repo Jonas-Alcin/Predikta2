@@ -217,7 +217,7 @@ export default function PredictionDetailPage({ params }: { params: { matchId: st
                             </div>
                             <button 
                               onClick={() => handleRemoveLeg(betIndex, idx)}
-                              className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-full transition-colors opacity-0 group-hover:opacity-100"
+                              className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-full transition-colors"
                               title="Quitar de la ficha"
                             >
                               <X className="w-4 h-4" />
