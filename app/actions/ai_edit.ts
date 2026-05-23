@@ -16,23 +16,12 @@ export async function getAdditionalLeg(fixtureId: number, level: string, existin
       apiKey: anthropicKey,
     });
 
-    // Get other matches of the day to build parlays
-    const todaysMatches = await getTodaysMatches();
-    const otherMatches = todaysMatches.filter(m => m.fixture.id !== fixtureId).slice(0, 5);
-    
-    let otherMatchesContext = `Partidos disponibles hoy:\n- ${targetMatch.teams.home.name} vs ${targetMatch.teams.away.name} (Partido Principal)\n`;
-    otherMatches.forEach(m => {
-      otherMatchesContext += `- ${m.teams.home.name} vs ${m.teams.away.name}\n`;
-    });
-
     const existingTitles = existingLegs.map(l => l.title).join(", ");
 
     const prompt = `
-Eres un analista deportivo experto. El usuario está armando una ficha combinada de nivel "${level}".
+Eres un analista deportivo experto. El usuario está armando una ficha combinada (Bet Builder) para el partido ${targetMatch.teams.home.name} vs ${targetMatch.teams.away.name} de nivel "${level}".
 Actualmente tiene las siguientes selecciones (legs) en su ficha:
 [${existingTitles}]
-
-${otherMatchesContext}
 
 Instrucciones:
 Proporciona EXACTAMENTE UNA NUEVA selección (leg) para agregar a esta ficha.

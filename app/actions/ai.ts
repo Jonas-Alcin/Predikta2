@@ -73,21 +73,11 @@ export async function generatePredictionAnalysis(fixtureId: number): Promise<AIP
       statsContext += `- H2H: Local ganó ${h2h.team1Wins}, Visitante ganó ${h2h.team2Wins}, ${h2h.draws} empates.\n`;
     }
 
-    // Get other matches of the day to build parlays
-    const todaysMatches = await getTodaysMatches();
-    const otherMatches = todaysMatches.filter(m => m.fixture.id !== fixtureId).slice(0, 5);
-    
-    let otherMatchesContext = `Otros partidos disponibles hoy para armar las combinadas:\n`;
-    otherMatches.forEach(m => {
-      otherMatchesContext += `- ${m.teams.home.name} vs ${m.teams.away.name} (Liga: ${m.league.name}, Fecha: ${new Date(m.fixture.date).toLocaleDateString()})\n`;
-    });
-
     const prompt = `
 Eres un analista deportivo experto. El usuario está viendo el partido ${targetMatch.teams.home.name} vs ${targetMatch.teams.away.name}.
-Tu tarea es armar 3 FICHAS COMBINADAS (parlays) que incluyan selecciones de este partido principal y opcionalmente de los "Otros partidos disponibles".
+Tu tarea es armar 3 FICHAS (Bet Builders o apuestas creadas) que incluyan selecciones ÚNICA Y EXCLUSIVAMENTE de este partido principal. NO incluyas selecciones de otros partidos bajo ninguna circunstancia.
 
 ${statsContext}
-${otherMatchesContext}
 
 Instrucciones estrictas para las fichas:
 IMPORTANTE: SÉ CREATIVO Y ALEATORIO. NO uses siempre los mismos mercados. Variá entre "Ambos Marcan", "Total Goles", "Córners", "Tarjetas", "Jugador a Marcar", etc.
@@ -159,12 +149,12 @@ async function getFallbackPrediction(match: any, todaysMatches: any[]): Promise<
     bets: [
       { 
         level: "Conservadora", 
-        title: `Combinada Segura`, 
+        title: `Ficha Segura ${t1}`, 
         description: "Estadísticamente probable",
         legs: [
           { title: `Doble Oportunidad: ${t1} o Empate`, subtitle: `${t1} vs ${t2}`, date: dateStr },
-          { title: `Más de 1.5 Goles`, subtitle: `${m2.teams.home.name} vs ${m2.teams.away.name}`, date: "Hoy" },
-          { title: `Gana ${m3.teams.home.name} o Empate`, subtitle: `${m3.teams.home.name} vs ${m3.teams.away.name}`, date: "Hoy" }
+          { title: `Más de 1.5 Goles en el partido`, subtitle: `${t1} vs ${t2}`, date: dateStr },
+          { title: `Más de 7.5 Córners Totales`, subtitle: `${t1} vs ${t2}`, date: dateStr }
         ]
       },
       { 
@@ -174,8 +164,8 @@ async function getFallbackPrediction(match: any, todaysMatches: any[]): Promise<
         legs: [
           { title: `Ambos Marcan`, subtitle: `${t1} vs ${t2}`, date: dateStr },
           { title: `Más de 8.5 Córners`, subtitle: `${t1} vs ${t2}`, date: dateStr },
-          { title: `Gana ${m2.teams.home.name}`, subtitle: `${m2.teams.home.name} vs ${m2.teams.away.name}`, date: "Hoy" },
-          { title: `Más de 1.5 Goles`, subtitle: `${m3.teams.home.name} vs ${m3.teams.away.name}`, date: "Hoy" }
+          { title: `Más de 3.5 Tarjetas Amarillas`, subtitle: `${t1} vs ${t2}`, date: dateStr },
+          { title: `Gana ${t1} o Empate`, subtitle: `${t1} vs ${t2}`, date: dateStr }
         ]
       },
       { 
@@ -185,9 +175,9 @@ async function getFallbackPrediction(match: any, todaysMatches: any[]): Promise<
         legs: [
           { title: `Gana ${t1} y Ambos Marcan`, subtitle: `${t1} vs ${t2}`, date: dateStr },
           { title: `Gol del "9" de ${t1}`, subtitle: `${t1} vs ${t2}`, date: dateStr },
-          { title: `Más de 4.5 Tarjetas Amarillas`, subtitle: `${t1} vs ${t2}`, date: dateStr },
-          { title: `Gana ${m2.teams.away.name}`, subtitle: `${m2.teams.home.name} vs ${m2.teams.away.name}`, date: "Hoy" },
-          { title: `Gana ${m3.teams.home.name} al Descanso`, subtitle: `${m3.teams.home.name} vs ${m3.teams.away.name}`, date: "Hoy" }
+          { title: `Más de 5.5 Tarjetas Amarillas`, subtitle: `${t1} vs ${t2}`, date: dateStr },
+          { title: `Menos de 11.5 Córners`, subtitle: `${t1} vs ${t2}`, date: dateStr },
+          { title: `Gana ${t1} al Descanso`, subtitle: `${t1} vs ${t2}`, date: dateStr }
         ]
       }
     ]
