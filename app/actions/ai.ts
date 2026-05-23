@@ -54,25 +54,46 @@ export async function generatePredictionAnalysis(fixtureId: number): Promise<AIP
       apiKey: anthropicKey,
     });
 
+    // Fetch real stats to feed to the AI
+    const h2h = await getH2HStats(match.teams.home.id, match.teams.away.id);
+    const homeForm = await getTeamForm(match.teams.home.id);
+    const awayForm = await getTeamForm(match.teams.away.id);
+
+    const homeWins = homeForm.filter((f: string) => f === 'W').length;
+    const awayWins = awayForm.filter((f: string) => f === 'W').length;
+    
+    let statsContext = `Estadísticas Reales:
+- Forma reciente ${match.teams.home.name} (últimos 5): ${homeWins} Victorias. Forma: [${homeForm.join(',')}]
+- Forma reciente ${match.teams.away.name} (últimos 5): ${awayWins} Victorias. Forma: [${awayForm.join(',')}]
+`;
+    if (h2h && h2h.total > 0) {
+      statsContext += `- Historial Directo (H2H): En ${h2h.total} partidos, el Local ganó ${h2h.team1Wins}, el Visitante ganó ${h2h.team2Wins}, y hubo ${h2h.draws} empates.\n`;
+    }
+
     const prompt = `
-Eres un analista deportivo experto y tipster profesional. Tu trabajo es analizar el siguiente partido y entregar una recomendación de apuesta en formato JSON.
+Eres un analista deportivo experto y tipster profesional. Tu trabajo es analizar el siguiente partido usando las estadísticas reales proveídas y entregar una recomendación de apuesta en formato JSON.
 
 Partido: ${match.teams.home.name} (Local) vs ${match.teams.away.name} (Visitante)
 Liga: ${match.league.name}
 Fecha: ${new Date(match.fixture.date).toLocaleDateString()}
 
-Basado en tu conocimiento histórico de estos equipos y la liga, genera un análisis profundo y convincente en español (máximo 40 palabras) explicando el porqué de tu recomendación, y proporciona 2 apuestas alternativas lógicas (ej: "Más de 2.5 goles", "Ambos marcan"). 
-Inventa cuotas (odds) realistas basadas en la probabilidad que estimes.
+${statsContext}
 
-Debes responder ÚNICAMENTE con un objeto JSON válido usando esta estructura exacta (no agregues markdown ni texto fuera del JSON):
+Instrucciones:
+1. Genera un análisis profundo en español (máximo 40 palabras) explicando tu recomendación basándote estrictamente en la 'Forma' y el 'H2H' dados.
+2. Proporciona 1 apuesta principal recomendada (la más segura según las stats).
+3. Proporciona 2 apuestas alternativas lógicas y DIVERSAS. NO repitas siempre el mismo tipo de apuesta (varía entre ganador, goles, hándicap, córners simulados, etc).
+4. Genera cuotas (odds) realistas y proporcionales a las estadísticas matemáticas. Si un equipo gana siempre, su cuota debe ser baja (ej. 1.20). Si es un partido parejo, las cuotas deben reflejarlo (ej. 2.50).
+
+Debes responder ÚNICAMENTE con un objeto JSON válido usando esta estructura exacta:
 {
-  "recommendedBet": "Texto corto, ej: Gana Local (1X2) o Doble Oportunidad",
+  "recommendedBet": "Texto corto con la apuesta principal",
   "confidence": número entero del 0 al 100,
-  "odds": "texto con formato decimal, ej: 1.85",
-  "reasoning": "Párrafo de análisis convincente basado en tu conocimiento histórico de ambos equipos...",
+  "odds": "texto decimal, ej: 1.85",
+  "reasoning": "Párrafo de análisis...",
   "alternatives": [
-    { "title": "Nombre apuesta", "risk": "Bajo/Medio/Alto", "odds": "1.70", "confidence": 65 },
-    { "title": "Nombre apuesta", "risk": "Bajo/Medio/Alto", "odds": "2.10", "confidence": 45 }
+    { "title": "Apuesta alternativa 1", "risk": "Bajo/Medio/Alto", "odds": "1.70", "confidence": 65 },
+    { "title": "Apuesta alternativa 2 (completamente diferente)", "risk": "Bajo/Medio/Alto", "odds": "2.10", "confidence": 45 }
   ]
 }
 `;
@@ -80,7 +101,7 @@ Debes responder ÚNICAMENTE con un objeto JSON válido usando esta estructura ex
     const msg = await anthropic.messages.create({
       model: "claude-3-5-sonnet-20241022",
       max_tokens: 500,
-      temperature: 0.5, // Slightly higher temperature since it needs to hallucinate stats
+      temperature: 0.7, // Increased to allow more dynamic alternative bets
       messages: [
         {
           role: "user",

@@ -23,8 +23,8 @@ type Slip = {
 };
 
 export default function DashboardPage() {
-  const [budget, setBudget] = useState("2000");
-  const [target, setTarget] = useState("25000");
+  const [budget, setBudget] = useState("");
+  const [target, setTarget] = useState("");
   const [generated, setGenerated] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   
